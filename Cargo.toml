@@ -1,0 +1,7 @@
+[workspace]
+resolver = "2"
+
+members = [
+    "clockwork",
+    "examples/hello_world"
+]

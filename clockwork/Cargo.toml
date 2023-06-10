@@ -1,0 +1,11 @@
+[package]
+name = "clockwork"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+winit = "0.28.6"
+raw-window-handle = "0.5.2"
+num = "0.4"
+num-derive = "0.3"
+num-traits = "0.2"
