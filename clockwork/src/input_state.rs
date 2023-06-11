@@ -120,6 +120,7 @@ impl InputState {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::thread::sleep;
 
     #[test]
     fn test_check_fresh() {
@@ -143,5 +144,26 @@ mod tests {
         input_state.signal_release_of(Key::A);
         assert!(!input_state.check_pressed(Key::A));
         assert!(input_state.check_released(Key::A));
+    }
+
+    #[test]
+    fn test_check_when_pressed_within() {
+        let mut input_state = InputState::new();
+        input_state.signal_press_of(Key::A);
+        sleep(Duration::from_millis(50));
+        assert!(input_state.check_pressed_within(Key::A, Duration::from_millis(75)));
+        sleep(Duration::from_millis(50));
+        assert!(!input_state.check_pressed_within(Key::A, Duration::from_millis(75)));
+    }
+
+    #[test]
+    fn test_check_when_released_within() {
+        let mut input_state = InputState::new();
+        input_state.signal_press_of(Key::A);
+        input_state.signal_release_of(Key::A);
+        sleep(Duration::from_millis(50));
+        assert!(input_state.check_released_within(Key::A, Duration::from_millis(75)));
+        sleep(Duration::from_millis(50));
+        assert!(!input_state.check_released_within(Key::A, Duration::from_millis(75)));
     }
 }
