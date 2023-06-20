@@ -1,6 +1,6 @@
 use crate::engine::Engine;
 
 pub trait Application: 'static {
-    fn init(engine: &Engine) -> Self;
-    fn update(&mut self, engine: &Engine, delta: f64);
+    fn init(engine: &mut Engine) -> Self;
+    fn update(&mut self, engine: &mut Engine, delta: f64);
 }

@@ -149,21 +149,21 @@ mod tests {
     #[test]
     fn test_check_when_pressed_within() {
         let mut input_state = InputState::new();
-        input_state.signal_press_of(Key::A);
+        input_state.signal_press_of(MouseButton::Left);
         sleep(Duration::from_millis(50));
-        assert!(input_state.check_pressed_within(Key::A, Duration::from_millis(75)));
+        assert!(input_state.check_pressed_within(MouseButton::Left, Duration::from_millis(75)));
         sleep(Duration::from_millis(50));
-        assert!(!input_state.check_pressed_within(Key::A, Duration::from_millis(75)));
+        assert!(!input_state.check_pressed_within(MouseButton::Left, Duration::from_millis(75)));
     }
 
     #[test]
     fn test_check_when_released_within() {
         let mut input_state = InputState::new();
-        input_state.signal_press_of(Key::A);
-        input_state.signal_release_of(Key::A);
+        input_state.signal_press_of(MouseButton::Left);
+        input_state.signal_release_of(MouseButton::Left);
         sleep(Duration::from_millis(50));
-        assert!(input_state.check_released_within(Key::A, Duration::from_millis(75)));
+        assert!(input_state.check_released_within(MouseButton::Left, Duration::from_millis(75)));
         sleep(Duration::from_millis(50));
-        assert!(!input_state.check_released_within(Key::A, Duration::from_millis(75)));
+        assert!(!input_state.check_released_within(MouseButton::Left, Duration::from_millis(75)));
     }
 }

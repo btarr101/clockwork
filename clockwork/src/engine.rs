@@ -2,10 +2,11 @@ use winit::{
     window::{ Window, WindowBuilder },
     event_loop::EventLoop,
     event::{ Event, WindowEvent, KeyboardInput, ElementState, self },
+    dpi::PhysicalSize,
 };
 
 use crate::{
-    renderer::Renderer,
+    graphics_context::GraphicsContext,
     application::Application,
     input_state::InputState,
     input::{ Key, MouseButton },
@@ -13,7 +14,7 @@ use crate::{
 
 pub struct Engine {
     pub window: Window,
-    pub renderer: Renderer,
+    pub graphics_context: GraphicsContext,
     pub input_state: InputState,
 }
 
@@ -26,19 +27,20 @@ impl Engine {
             .build(&event_loop)
             .unwrap();
 
-        let renderer = Renderer::new(&window);
+        let size = window.inner_size();
+        let graphics_context = GraphicsContext::new(&window, size.width, size.height);
 
         let input_state = InputState::new();
 
         let mut engine = Engine {
             input_state,
             window,
-            renderer,
+            graphics_context,
         };
 
-        let mut app = App::init(&engine);
+        let mut app = App::init(&mut engine);
 
-        event_loop.run(move |event, _, _| {
+        event_loop.run(move |event, _, control_flow| {
             match event {
                 Event::WindowEvent { event, .. } =>
                     match event {
@@ -70,10 +72,13 @@ impl Engine {
                                 }
                             }
                         }
+                        WindowEvent::CloseRequested => control_flow.set_exit(),
+                        WindowEvent::Resized(PhysicalSize { width, height }) =>
+                            engine.graphics_context.resize_surface(width, height),
                         _ => (),
                     }
                 Event::MainEventsCleared => {
-                    app.update(&engine, 0.0);
+                    app.update(&mut engine, 0.0);
                 }
                 _ => (),
             }
