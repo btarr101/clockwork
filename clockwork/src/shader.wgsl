@@ -6,6 +6,7 @@ struct VertexInput {
 
 struct VertexOutput {
     @builtin(position) clip_position: vec4<f32>,
+    @location(0) uv: vec2<f32>,
 };
 
 struct Global {
@@ -29,6 +30,7 @@ fn vs_main(
     var out: VertexOutput;
     let vertex_transform = local.transform * vec4<f32>(in.position, 1.0);
     out.clip_position = global.mvp * vertex_transform;
+    out.uv = in.uv;
     return out;
 }
 
@@ -37,5 +39,5 @@ fn vs_main(
 fn fs_main(
     in: VertexOutput,    
 ) -> @location(0) vec4<f32> {
-    return vec4<f32>(0.3, 0.2, 0.1, 1.0);
+    return vec4<f32>(in.uv, 0.1, 1.0);
 }

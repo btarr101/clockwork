@@ -73,8 +73,10 @@ impl Engine {
                             }
                         }
                         WindowEvent::CloseRequested => control_flow.set_exit(),
-                        WindowEvent::Resized(PhysicalSize { width, height }) =>
-                            engine.graphics_context.resize_surface(width, height),
+                        WindowEvent::Resized(PhysicalSize { width, height }) => {
+                            engine.graphics_context.resize_surface(width, height);
+                            app.on_window_resize(&mut engine, width, height);
+                        }
                         _ => (),
                     }
                 Event::MainEventsCleared => {

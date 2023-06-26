@@ -1,45 +1,33 @@
+use std::f32::consts::PI;
+
 use glam::{ Affine3A, Mat4, Vec3, Vec3A };
 
 use clockwork::{
     application::Application,
     engine::Engine,
     input::Key,
-    graphics_context::{ MeshId, RenderOperation },
-    mesh::Vertex,
-    camera::Camera,
+    graphics_context::{ RenderOperation, QUAD_MESH },
+    camera::{ Camera, Projection },
 };
 
 pub struct HelloWorld {
     camera: Camera,
-    triangle_affine: Affine3A,
-    triangle_mesh: MeshId,
+    affine: Affine3A,
 }
 
 impl Application for HelloWorld {
     fn init(engine: &mut Engine) -> Self {
         Self {
-            camera: Camera::default(),
-            triangle_affine: Affine3A::from_translation(Vec3 { x: 0.0, y: 0.0, z: -0.5 }),
-            triangle_mesh: engine.graphics_context.load_mesh(
-                &[
-                    Vertex {
-                        position: [-0.5, 0.0, 0.0],
-                        normal: [0.0, 0.0, 0.0],
-                        texture_coordinates: [0.0, 0.0],
-                    },
-                    Vertex {
-                        position: [0.5, 0.0, 0.0],
-                        normal: [0.0, 0.0, 0.0],
-                        texture_coordinates: [0.0, 0.0],
-                    },
-                    Vertex {
-                        position: [0.0, 1.0, 0.0],
-                        normal: [0.0, 0.0, 0.0],
-                        texture_coordinates: [0.0, 0.0],
-                    },
-                ],
-                &[0, 1, 2]
-            ),
+            camera: Camera::new(Affine3A::IDENTITY, Projection::Perspective {
+                aspect: {
+                    let size = engine.window.inner_size();
+                    (size.width as f32) / (size.height as f32)
+                },
+                fov: PI / 2.0,
+                znear: 0.01,
+                zfar: 100.0,
+            }),
+            affine: Affine3A::from_translation(Vec3 { x: 0.0, y: 0.0, z: -0.5 }),
         }
     }
 
@@ -56,17 +44,26 @@ impl Application for HelloWorld {
         let movement =
             ((Vec3 { x: right - left, y: 0.0, z: back - forward }).normalize_or_zero() +
                 Vec3 { x: 0.0, y: up - down, z: 0.0 }) *
-            0.001;
+            0.1;
         self.camera.affine.translation += Vec3A::from(movement);
 
         engine.graphics_context.perform_render_pass(
             self.camera.get_view_projection_matrix().to_cols_array_2d(),
             &[
                 RenderOperation {
-                    transform: Mat4::from(self.triangle_affine).to_cols_array_2d(),
-                    mesh: self.triangle_mesh,
+                    transform: Mat4::from(self.affine).to_cols_array_2d(),
+                    mesh: QUAD_MESH,
                 },
             ]
         )
+    }
+
+    fn on_window_resize(&mut self, _engine: &mut Engine, new_width: u32, new_height: u32) {
+        let new_aspect = (new_width as f32) / (new_height as f32);
+        match self.camera.mut_projection() {
+            Projection::Perspective { aspect, .. } => {
+                *aspect = new_aspect;
+            }
+        }
     }
 }

@@ -1,4 +1,4 @@
-use std::{ f32::consts::PI, cell::RefCell };
+use std::cell::RefCell;
 
 use glam::{ Affine3A, Mat4 };
 
@@ -29,24 +29,16 @@ impl Projection {
     }
 }
 
-impl Default for Camera {
-    fn default() -> Self {
-        let projection = Projection::Perspective {
-            aspect: 1.0,
-            fov: PI / 2.0,
-            znear: 0.01,
-            zfar: 100.0,
-        };
-
+impl Camera {
+    /// Creates a new [Camera] with the given projection.
+    pub fn new(affine: Affine3A, projection: Projection) -> Self {
         Self {
-            affine: Affine3A::IDENTITY,
+            affine,
             projection,
             projection_mat: RefCell::new(None),
         }
     }
-}
 
-impl Camera {
     /// Mutates the [Projection] of this [Camera].
     ///
     /// Since generating the projection matrix takes work, it is only regenerated if

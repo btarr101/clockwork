@@ -16,7 +16,8 @@ pub struct InputState {
     // important to note that a state is only valid if it has a
     // non-None timestamp.
     states: [bool; INPUTS],
-    timestamps: [Option<Instant>; INPUTS],
+    press_timestamps: [Option<Instant>; INPUTS],
+    releaste_timestamps: [Option<Instant>; INPUTS],
 }
 
 impl From<Key> for Input {
@@ -35,7 +36,8 @@ impl Default for InputState {
     fn default() -> Self {
         Self {
             states: [false; INPUTS],
-            timestamps: [None; INPUTS],
+            press_timestamps: [None; INPUTS],
+            releaste_timestamps: [None; INPUTS],
         }
     }
 }
@@ -79,7 +81,7 @@ impl InputState {
         let index = Self::get_state_index(input.into());
         if !self.states[index] {
             self.states[index] = true;
-            self.timestamps[index] = Some(Instant::now());
+            self.press_timestamps[index] = Some(Instant::now());
         }
     }
 
@@ -88,7 +90,7 @@ impl InputState {
         let index = Self::get_state_index(input.into());
         if self.states[index] {
             self.states[index] = false;
-            self.timestamps[index] = Some(Instant::now());
+            self.releaste_timestamps[index] = Some(Instant::now());
         }
     }
 
@@ -102,13 +104,13 @@ impl InputState {
     fn check_within_duration(&self, input: Input, duration: Duration, is_pressed: bool) -> bool {
         let index = Self::get_state_index(input);
 
-        // Return false if released.
-        if self.states[index] != is_pressed {
-            return false;
-        }
+        let timestamps = match is_pressed {
+            true => &self.press_timestamps,
+            false => &self.releaste_timestamps,
+        };
 
         // Check if the input timestamp is within 'duration' from now.
-        if let Some(timestamp) = self.timestamps[index] {
+        if let Some(timestamp) = timestamps[index] {
             let input_duration = Instant::now() - timestamp;
             input_duration <= duration
         } else {

@@ -1,7 +1,4 @@
-use std::{ collections::btree_set::Difference, process::Command };
-
 use bytemuck::{ Zeroable, Pod, bytes_of };
-use num_traits::CheckedSub;
 use pollster::block_on;
 use raw_window_handle::{ HasRawWindowHandle, HasRawDisplayHandle };
 use wgpu::{
@@ -59,6 +56,11 @@ use wgpu::{
 };
 
 use crate::mesh::{ Vertex, Index, Mesh, VERTEX_BUFFER_LAYOUT };
+
+/// MeshId for a square mesh.
+// Note that an actually qaud mesh is pushed onto meshes
+// when the context is created, and this is tied to that.
+pub const QUAD_MESH: MeshId = MeshId(0);
 
 /// Id for accessing a mesh resource.
 #[derive(Clone, Copy)]
@@ -238,7 +240,7 @@ impl GraphicsContext {
             format: surface.get_capabilities(&adapter).formats[0],
             width,
             height,
-            present_mode: PresentMode::AutoNoVsync,
+            present_mode: PresentMode::AutoVsync,
             alpha_mode: CompositeAlphaMode::Auto,
             view_formats: vec![],
         };
@@ -254,6 +256,35 @@ impl GraphicsContext {
             })
         );
 
+        let quad_mesh = Mesh::load(
+            &device,
+            &[
+                Vertex {
+                    position: [-0.5, 0.5, 0.0],
+                    normal: [0.0, 0.0, 1.0],
+                    texture_coordinates: [0.0, 0.0],
+                },
+                Vertex {
+                    position: [0.5, 0.5, 0.0],
+                    normal: [0.0, 0.0, 1.0],
+                    texture_coordinates: [1.0, 0.0],
+                },
+                Vertex {
+                    position: [-0.5, -0.5, 0.0],
+                    normal: [0.0, 0.0, 1.0],
+                    texture_coordinates: [0.0, 1.0],
+                },
+                Vertex {
+                    position: [0.5, -0.5, 0.0],
+                    normal: [0.0, 0.0, 1.0],
+                    texture_coordinates: [1.0, 1.0],
+                },
+            ],
+            &[0, 1, 2, 1, 3, 2]
+        );
+
+        let meshes = vec![quad_mesh];
+
         Self {
             device,
             queue,
@@ -265,7 +296,7 @@ impl GraphicsContext {
             global_buffer,
             bind_groups_and_buffers: Vec::new(),
 
-            meshes: Vec::new(),
+            meshes,
         }
     }
 
@@ -276,7 +307,6 @@ impl GraphicsContext {
         self.meshes.push(mesh);
         id
     }
-
     /// Performs a render pass.
     pub fn perform_render_pass(
         &mut self,
