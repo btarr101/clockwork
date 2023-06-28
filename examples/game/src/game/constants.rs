@@ -10,6 +10,9 @@ pub type UnitVec2 = IVec2;
 pub const UNITS_PER_RENDER_UNIT: Unit = 1000;
 pub const UNITS_PER_TILE: Unit = 1000;
 
+// TEMP
+pub const TEXTURE_PATH: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/res/goku.jpg");
+
 /// Trait for the smalles unit in the game.
 pub trait UnitTrait {
     /// Converts [Unit]'s - the smallest in game increment - to Tile units.

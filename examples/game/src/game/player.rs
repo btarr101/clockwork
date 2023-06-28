@@ -3,11 +3,11 @@ use std::{ time::Duration, cmp::{ min, max, Ordering } };
 use clockwork::{
     input_state::InputState,
     input::Key,
-    graphics_context::{ RenderOperation, QUAD_MESH },
+    graphics_context::{ RenderOperation, QUAD_MESH, TextureId },
 };
 use glam::{ IVec2, Mat4 };
 use num_traits::abs;
-use super::{ tiles::Tiles, MAX_RUN, aabb::Aabb, constants::{ Unit, UnitVec2, UnitVec2Trait } };
+use super::{ tiles::Tiles, aabb::Aabb, constants::{ Unit, UnitVec2, UnitVec2Trait } };
 
 pub struct Player {
     /// Maximum the speed the player can reach itself via running.
@@ -18,6 +18,9 @@ pub struct Player {
 
     /// When the player stops running, how fast they deccelerate.
     pub run_deccel: Unit,
+
+    /// How strong the players jump is
+    pub jump_power: Unit,
 
     /// How long a jump input will be registered after is has been inputted.
     ///
@@ -32,9 +35,10 @@ pub struct Player {
 impl Default for Player {
     fn default() -> Self {
         Self {
-            max_run: 250,
+            max_run: 256,
             run_accel: 32,
-            run_deccel: 16,
+            run_deccel: 24,
+            jump_power: 512,
             jump_buffering: Duration::from_millis(200),
             position: UnitVec2::ZERO,
             velocity: UnitVec2::ZERO,
@@ -59,9 +63,9 @@ impl Player {
             _ => {
                 let accel = horizontal_input * self.run_accel;
                 if horizontal_input > 0 {
-                    min(accel, MAX_RUN - self.velocity.x)
+                    min(accel, self.max_run - self.velocity.x)
                 } else {
-                    max(accel, -MAX_RUN - self.velocity.x)
+                    max(accel, -self.max_run - self.velocity.x)
                 }
             }
         };
@@ -84,7 +88,7 @@ impl Player {
                 Ordering::Greater => tile_aabb.y_top() - aabb.height(),
             };
 
-            self.velocity.y = if self.velocity.y > 0 && jump { -500 } else { 0 };
+            self.velocity.y = if self.velocity.y > 0 && jump { -self.jump_power } else { 0 };
         }
 
         // apply horizontal velocity
@@ -102,11 +106,12 @@ impl Player {
         }
     }
 
-    pub fn get_render_operation(&self) -> RenderOperation {
+    pub fn get_render_operation(&self, texture: TextureId) -> RenderOperation {
         RenderOperation {
             transform: Mat4::from_translation(
                 self.position.to_render_vec2().extend(0.0)
             ).to_cols_array_2d(),
+            texture,
             mesh: QUAD_MESH,
         }
     }

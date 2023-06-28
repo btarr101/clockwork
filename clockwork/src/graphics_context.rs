@@ -1,6 +1,7 @@
 use bytemuck::{ Zeroable, Pod, bytes_of };
 use pollster::block_on;
 use raw_window_handle::{ HasRawWindowHandle, HasRawDisplayHandle };
+use anyhow::Result;
 use wgpu::{
     Instance,
     InstanceDescriptor,
@@ -53,9 +54,12 @@ use wgpu::{
     LoadOp,
     Color,
     IndexFormat,
+    Sampler,
+    SamplerDescriptor,
+    BindingResource,
 };
 
-use crate::mesh::{ Vertex, Index, Mesh, VERTEX_BUFFER_LAYOUT };
+use crate::{ mesh::{ Vertex, Index, Mesh, VERTEX_BUFFER_LAYOUT }, texture::Texture };
 
 /// MeshId for a square mesh.
 // Note that an actually qaud mesh is pushed onto meshes
@@ -74,6 +78,7 @@ pub struct TextureId(usize);
 #[derive(Clone, Copy)]
 pub struct RenderOperation {
     pub transform: [[f32; 4]; 4],
+    pub texture: TextureId,
     pub mesh: MeshId,
 }
 
@@ -85,10 +90,13 @@ pub struct GraphicsContext {
 
     pub(crate) pipeline: RenderPipeline,
     bind_group_layout: BindGroupLayout,
+    texture_bind_group_layout: BindGroupLayout,
     global_buffer: Buffer,
-    bind_groups_and_buffers: Vec<(BindGroup, Buffer)>,
+    sampler: Sampler,
 
+    bind_groups_and_buffers: Vec<(BindGroup, Buffer)>,
     meshes: Vec<Mesh>,
+    bind_groups_and_textures: Vec<(BindGroup, Texture)>,
 }
 
 #[repr(C)]
@@ -109,7 +117,7 @@ unsafe impl Pod for GlobalBuffer {}
 unsafe impl Zeroable for LocalBuffer {}
 unsafe impl Pod for LocalBuffer {}
 
-fn setup_pipeline(device: &Device) -> (BindGroupLayout, RenderPipeline) {
+fn setup_pipeline(device: &Device) -> (BindGroupLayout, BindGroupLayout, RenderPipeline) {
     let bind_group_layout = device.create_bind_group_layout(
         &(BindGroupLayoutDescriptor {
             label: None,
@@ -140,10 +148,36 @@ fn setup_pipeline(device: &Device) -> (BindGroupLayout, RenderPipeline) {
         })
     );
 
+    let texture_bind_group_layout = device.create_bind_group_layout(
+        &(BindGroupLayoutDescriptor {
+            label: None,
+            entries: &[
+                // texture
+                BindGroupLayoutEntry {
+                    binding: 0,
+                    visibility: ShaderStages::FRAGMENT,
+                    ty: BindingType::Texture {
+                        sample_type: wgpu::TextureSampleType::Float { filterable: true },
+                        view_dimension: wgpu::TextureViewDimension::D2,
+                        multisampled: false,
+                    },
+                    count: None,
+                },
+                // sampler
+                BindGroupLayoutEntry {
+                    binding: 1,
+                    visibility: ShaderStages::FRAGMENT,
+                    ty: BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
+                    count: None,
+                },
+            ],
+        })
+    );
+
     let layout = device.create_pipeline_layout(
         &(PipelineLayoutDescriptor {
             label: None,
-            bind_group_layouts: &[&bind_group_layout],
+            bind_group_layouts: &[&bind_group_layout, &texture_bind_group_layout],
             push_constant_ranges: &[],
         })
     );
@@ -188,7 +222,7 @@ fn setup_pipeline(device: &Device) -> (BindGroupLayout, RenderPipeline) {
         })
     );
 
-    (bind_group_layout, pipeline)
+    (bind_group_layout, texture_bind_group_layout, pipeline)
 }
 
 impl GraphicsContext {
@@ -246,13 +280,26 @@ impl GraphicsContext {
         };
         surface.configure(&device, &surface_config);
 
-        let (bind_group_layout, pipeline) = setup_pipeline(&device);
+        let (bind_group_layout, texture_bind_group_layout, pipeline) = setup_pipeline(&device);
 
         let global_buffer = device.create_buffer_init(
             &(BufferInitDescriptor {
                 label: None,
                 contents: bytes_of(&GlobalBuffer::zeroed()),
                 usage: BufferUsages::UNIFORM | BufferUsages::COPY_DST,
+            })
+        );
+
+        let sampler = device.create_sampler(
+            &(SamplerDescriptor {
+                label: None,
+                address_mode_u: wgpu::AddressMode::ClampToEdge,
+                address_mode_v: wgpu::AddressMode::ClampToEdge,
+                address_mode_w: wgpu::AddressMode::ClampToEdge,
+                mag_filter: wgpu::FilterMode::Linear,
+                min_filter: wgpu::FilterMode::Nearest,
+                mipmap_filter: wgpu::FilterMode::Nearest,
+                ..Default::default()
             })
         );
 
@@ -283,7 +330,9 @@ impl GraphicsContext {
             &[0, 1, 2, 1, 3, 2]
         );
 
+        let bind_groups_and_buffers = Vec::new();
         let meshes = vec![quad_mesh];
+        let bind_groups_and_textures = Vec::new();
 
         Self {
             device,
@@ -293,10 +342,13 @@ impl GraphicsContext {
 
             pipeline,
             bind_group_layout,
+            texture_bind_group_layout,
             global_buffer,
-            bind_groups_and_buffers: Vec::new(),
+            sampler,
 
+            bind_groups_and_buffers,
             meshes,
+            bind_groups_and_textures,
         }
     }
 
@@ -307,6 +359,32 @@ impl GraphicsContext {
         self.meshes.push(mesh);
         id
     }
+
+    /// Loads a texture and returns a [TextureId] that refers to it.
+    pub fn load_texture(&mut self, path: &str) -> Result<TextureId> {
+        let texture = Texture::load(&self.device, &self.queue, path)?;
+        let bind_group = self.device.create_bind_group(
+            &(BindGroupDescriptor {
+                label: None,
+                layout: &self.texture_bind_group_layout,
+                entries: &[
+                    BindGroupEntry {
+                        binding: 0,
+                        resource: BindingResource::TextureView(&texture.view),
+                    },
+                    BindGroupEntry {
+                        binding: 1,
+                        resource: BindingResource::Sampler(&self.sampler),
+                    },
+                ],
+            })
+        );
+
+        let id = TextureId(self.bind_groups_and_textures.len());
+        self.bind_groups_and_textures.push((bind_group, texture));
+        Ok(id)
+    }
+
     /// Performs a render pass.
     pub fn perform_render_pass(
         &mut self,
@@ -402,6 +480,11 @@ impl GraphicsContext {
                 };
                 self.queue.write_buffer(buffer, 0, bytes_of(&local_buffer));
                 render_pass.set_bind_group(0, bind_group, &[]);
+                render_pass.set_bind_group(
+                    1,
+                    &self.bind_groups_and_textures[operation.texture.0].0,
+                    &[]
+                );
 
                 let mesh = self.meshes.get(operation.mesh.0).unwrap();
 

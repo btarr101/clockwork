@@ -17,3 +17,5 @@ num-derive = "0.3"
 num-traits = "0.2"
 
 glam = "0.24.0"
+
+anyhow = "1.0.71"

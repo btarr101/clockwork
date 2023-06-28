@@ -22,6 +22,11 @@ struct Local {
 var<uniform> local: Local;
 
 
+@group(1) @binding(0)
+var texture: texture_2d<f32>;
+@group(1) @binding(1)
+var texture_sampler: sampler;
+
 @vertex
 fn vs_main(
     in: VertexInput,
@@ -39,5 +44,5 @@ fn vs_main(
 fn fs_main(
     in: VertexOutput,    
 ) -> @location(0) vec4<f32> {
-    return vec4<f32>(in.uv, 0.1, 1.0);
+    return textureSample(texture, texture_sampler, in.uv);
 }

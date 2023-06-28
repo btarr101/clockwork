@@ -3,7 +3,7 @@ use std::f32::consts::PI;
 use clockwork::{
     application::Application,
     camera::{ Camera, Projection },
-    graphics_context::RenderOperation,
+    graphics_context::{ RenderOperation, TextureId },
     engine::Engine,
 };
 use glam::{ Affine3A, IVec2, Vec3 };
@@ -16,14 +16,15 @@ mod player;
 use tiles::Tiles;
 use player::Player;
 
-use self::constants::UnitVec2Trait;
+use constants::UnitVec2Trait;
+
+use self::constants::TEXTURE_PATH;
 pub struct Game {
     camera: Camera,
     player: Player,
     tiles: Tiles,
+    texture: TextureId,
 }
-
-const MAX_RUN: i32 = 256;
 
 impl Application for Game {
     fn init(engine: &mut clockwork::engine::Engine) -> Self {
@@ -47,33 +48,36 @@ impl Application for Game {
                     [1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1],
                     [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
                     [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+                    [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+                    [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+                    [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1],
                     [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
                     [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+                    [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1],
                     [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-                    [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-                    [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-                    [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-                    [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-                    [1, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-                    [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1],
+                    [1, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 1, 0, 0, 0, 1],
+                    [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 1, 0, 0, 0, 1],
                     [1, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 1, 1],
                     [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 1],
-                    [1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+                    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
                 ],
             },
+            texture: engine.graphics_context.load_texture(TEXTURE_PATH).unwrap(),
         }
     }
 
     fn update(&mut self, engine: &mut Engine, _delta: f64) {
         self.player.update(&self.tiles, &engine.input_state);
 
-        let mut render_ops: Vec<RenderOperation> = self.tiles.get_render_operations().collect();
-        render_ops.push(self.player.get_render_operation());
+        let mut render_ops: Vec<RenderOperation> = self.tiles
+            .get_render_operations(self.texture)
+            .collect();
+        render_ops.push(self.player.get_render_operation(self.texture));
 
-        self.camera.affine.translation = self.player.position
+        let target = self.player.position
             .to_render_vec2()
-            .extend(5.0 + 2.0 * self.player.velocity.to_render_vec2().length())
-            .into();
+            .extend(5.0 + 1.0 * self.player.velocity.to_render_vec2().x.abs());
+        self.camera.affine.translation = self.camera.affine.translation.lerp(target.into(), 0.25);
 
         engine.graphics_context.perform_render_pass(
             self.camera.get_view_projection_matrix().to_cols_array_2d(),
