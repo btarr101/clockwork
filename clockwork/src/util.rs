@@ -4,6 +4,7 @@ use wgpu::util::DeviceExt;
 
 use crate::graphics_context::GraphicsContext;
 
+#[allow(unused)]
 pub fn load_texture(context: GraphicsContext, path: String) -> Option<Texture> {
     let image = Reader::open(path).ok()?.decode().ok()?;
     let bytes = image.to_rgba8();

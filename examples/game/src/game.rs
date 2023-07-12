@@ -70,10 +70,14 @@ impl Application for Game {
         let mut render_ops: Vec<RenderOperation> = self.tiles.get_render_operations().collect();
         render_ops.push(self.player.get_render_operation());
 
-        self.camera.affine.translation = self.player.position
+        let camera_translation_target = self.player.position
             .to_render_vec2()
-            .extend(5.0 + 2.0 * self.player.velocity.to_render_vec2().length())
-            .into();
+            .extend(8.0 + 1.0 * self.player.velocity.to_render_vec2().length());
+
+        self.camera.affine.translation = self.camera.affine.translation.lerp(
+            camera_translation_target.into(),
+            0.2
+        );
 
         engine.graphics_context.perform_render_pass(
             self.camera.get_view_projection_matrix().to_cols_array_2d(),

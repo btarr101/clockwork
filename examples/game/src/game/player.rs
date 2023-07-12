@@ -25,8 +25,19 @@ pub struct Player {
     /// jump is still triggered.
     pub jump_buffering: Duration,
 
+    /// How many frames the player as before gravity starts applying.
+    ///
+    /// This is calculated in frames rather then in real time because it impacts
+    /// game physics. The `cayote_timer` variable is updated every time `update()` is called,
+    /// and when a player becomes grounded the timer is set to this `cayote_time`.
+    pub cayote_time: u32,
+
     pub position: UnitVec2,
     pub velocity: UnitVec2,
+
+    /// Timer for "cayote time", where the player can still jump for a period of time after walking
+    /// off a ledge.
+    pub cayote_timer: u32,
 }
 
 impl Default for Player {
@@ -35,9 +46,11 @@ impl Default for Player {
             max_run: 250,
             run_accel: 32,
             run_deccel: 16,
-            jump_buffering: Duration::from_millis(200),
+            jump_buffering: Duration::from_millis(50),
+            cayote_time: 8,
             position: UnitVec2::ZERO,
             velocity: UnitVec2::ZERO,
+            cayote_timer: 0,
         }
     }
 }
@@ -49,6 +62,8 @@ impl Player {
         let left = input_state.check_pressed(Key::A) as Unit;
         let jump = input_state.check_pressed_within(Key::Space, self.jump_buffering);
 
+        // Modify Velocity
+        // =======================================================================
         // horizontal movement
         let horizontal_input = right - left;
         self.velocity.x += match horizontal_input {
@@ -66,10 +81,16 @@ impl Player {
             }
         };
 
-        // gravity
-        self.velocity.y += 30;
+        // jump or gravity
+        if self.cayote_timer > 0 && jump {
+            self.cayote_timer = 0;
+            self.velocity.y = -500;
+        } else {
+            self.velocity.y += 30;
+        }
 
-        // apply velocity
+        // Apply Velocity and Fix
+        // =======================================================================
         self.position.y += self.velocity.y;
 
         // Fix for vertical collision
@@ -81,10 +102,16 @@ impl Player {
             self.position.y = match self.velocity.y.cmp(&0) {
                 Ordering::Less => tile_aabb.y_bottom(),
                 Ordering::Equal => panic!("Collision w/ no movement!"),
-                Ordering::Greater => tile_aabb.y_top() - aabb.height(),
+                Ordering::Greater => {
+                    // side effect here a lil ugly
+                    self.cayote_timer = self.cayote_time;
+                    tile_aabb.y_top() - aabb.height()
+                }
             };
 
-            self.velocity.y = if self.velocity.y > 0 && jump { -500 } else { 0 };
+            self.velocity.y = 0;
+        } else {
+            self.cayote_timer = self.cayote_timer.saturating_sub(1);
         }
 
         // apply horizontal velocity
