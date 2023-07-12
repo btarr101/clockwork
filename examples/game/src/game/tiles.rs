@@ -1,4 +1,4 @@
-use clockwork::graphics_context::{ RenderOperation, QUAD_MESH };
+use clockwork::graphics_context::{ RenderOperation, QUAD_MESH, TextureId };
 use glam::{ IVec2, Mat4 };
 
 use super::{ constants::{ UnitVec2, UNITS_PER_TILE, UnitVec2Trait }, aabb::Aabb };
@@ -61,7 +61,10 @@ impl Tiles {
         None
     }
 
-    pub fn get_render_operations(&self) -> impl Iterator<Item = RenderOperation> + '_ {
+    pub fn get_render_operations(
+        &self,
+        texture: TextureId
+    ) -> impl Iterator<Item = RenderOperation> + '_ {
         let tiles = self.map
             .as_slice()
             .iter()
@@ -73,7 +76,7 @@ impl Tiles {
                     .map(move |(tile_x, val)| (tile_x, tile_y, val))
             );
 
-        tiles.filter_map(|(tile_x, tile_y, val)| {
+        tiles.filter_map(move |(tile_x, tile_y, val)| {
             if *val != 0 {
                 let position =
                     self.position + IVec2 { x: tile_x as i32, y: tile_y as i32 } * UNITS_PER_TILE;
@@ -81,6 +84,7 @@ impl Tiles {
                     transform: Mat4::from_translation(
                         position.to_render_vec2().extend(0.0)
                     ).to_cols_array_2d(),
+                    texture,
                     mesh: QUAD_MESH,
                 })
             } else {

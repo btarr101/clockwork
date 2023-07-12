@@ -3,11 +3,11 @@ use std::{ time::Duration, cmp::{ min, max, Ordering } };
 use clockwork::{
     input_state::InputState,
     input::Key,
-    graphics_context::{ RenderOperation, QUAD_MESH },
+    graphics_context::{ RenderOperation, QUAD_MESH, TextureId },
 };
 use glam::{ IVec2, Mat4 };
 use num_traits::abs;
-use super::{ tiles::Tiles, MAX_RUN, aabb::Aabb, constants::{ Unit, UnitVec2, UnitVec2Trait } };
+use super::{ tiles::Tiles, aabb::Aabb, constants::{ Unit, UnitVec2, UnitVec2Trait } };
 
 pub struct Player {
     /// Maximum the speed the player can reach itself via running.
@@ -18,6 +18,9 @@ pub struct Player {
 
     /// When the player stops running, how fast they deccelerate.
     pub run_deccel: Unit,
+
+    /// How strong the players jump is
+    pub jump_power: Unit,
 
     /// How long a jump input will be registered after is has been inputted.
     ///
@@ -43,9 +46,10 @@ pub struct Player {
 impl Default for Player {
     fn default() -> Self {
         Self {
-            max_run: 250,
+            max_run: 256,
             run_accel: 32,
             run_deccel: 16,
+            jump_power: 450,
             jump_buffering: Duration::from_millis(50),
             cayote_time: 8,
             position: UnitVec2::ZERO,
@@ -74,9 +78,9 @@ impl Player {
             _ => {
                 let accel = horizontal_input * self.run_accel;
                 if horizontal_input > 0 {
-                    min(accel, MAX_RUN - self.velocity.x)
+                    min(accel, self.max_run - self.velocity.x)
                 } else {
-                    max(accel, -MAX_RUN - self.velocity.x)
+                    max(accel, -self.max_run - self.velocity.x)
                 }
             }
         };
@@ -84,7 +88,7 @@ impl Player {
         // jump or gravity
         if self.cayote_timer > 0 && jump {
             self.cayote_timer = 0;
-            self.velocity.y = -500;
+            self.velocity.y = -self.jump_power;
         } else {
             self.velocity.y += 30;
         }
@@ -129,11 +133,12 @@ impl Player {
         }
     }
 
-    pub fn get_render_operation(&self) -> RenderOperation {
+    pub fn get_render_operation(&self, texture: TextureId) -> RenderOperation {
         RenderOperation {
             transform: Mat4::from_translation(
                 self.position.to_render_vec2().extend(0.0)
             ).to_cols_array_2d(),
+            texture,
             mesh: QUAD_MESH,
         }
     }

@@ -1,17 +1,17 @@
 use std::f32::consts::PI;
 
-use glam::{ Affine3A, Mat4, Vec3, Vec3A };
+use glam::{ Affine3A, Vec3, Vec3A };
 
 use clockwork::{
     application::Application,
     engine::Engine,
     input::Key,
-    graphics_context::{ RenderOperation, QUAD_MESH },
     camera::{ Camera, Projection },
 };
 
 pub struct HelloWorld {
     camera: Camera,
+    #[allow(unused)]
     affine: Affine3A,
 }
 
@@ -47,15 +47,16 @@ impl Application for HelloWorld {
             0.1;
         self.camera.affine.translation += Vec3A::from(movement);
 
-        engine.graphics_context.perform_render_pass(
-            self.camera.get_view_projection_matrix().to_cols_array_2d(),
-            &[
-                RenderOperation {
-                    transform: Mat4::from(self.affine).to_cols_array_2d(),
-                    mesh: QUAD_MESH,
-                },
-            ]
-        )
+        // TODO: OPTION FOR NO TEXTURE JUST COLOR! - like texture or color
+        // engine.graphics_context.perform_render_pass(
+        //     self.camera.get_view_projection_matrix().to_cols_array_2d(),
+        //     &[
+        //         RenderOperation {
+        //             transform: Mat4::from(self.affine).to_cols_array_2d(),
+        //             mesh: QUAD_MESH,
+        //         },
+        //     ]
+        // )
     }
 
     fn on_window_resize(&mut self, _engine: &mut Engine, new_width: u32, new_height: u32) {
