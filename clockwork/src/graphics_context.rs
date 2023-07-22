@@ -1,3 +1,5 @@
+use std::default;
+
 use bytemuck::{ Zeroable, Pod, bytes_of };
 use pollster::block_on;
 use raw_window_handle::{ HasRawWindowHandle, HasRawDisplayHandle };
@@ -57,6 +59,15 @@ use wgpu::{
     Sampler,
     SamplerDescriptor,
     BindingResource,
+    DepthStencilState,
+    CompareFunction,
+    StencilState,
+    DepthBiasState,
+    RenderPassDepthStencilAttachment,
+    BlendComponent,
+    BlendFactor,
+    BlendOperation,
+    StencilFaceState,
 };
 
 use crate::{ mesh::{ Vertex, Index, Mesh, VERTEX_BUFFER_LAYOUT }, texture::Texture };
@@ -65,13 +76,14 @@ use crate::{ mesh::{ Vertex, Index, Mesh, VERTEX_BUFFER_LAYOUT }, texture::Textu
 // Note that an actually qaud mesh is pushed onto meshes
 // when the context is created, and this is tied to that.
 pub const QUAD_MESH: MeshId = MeshId(0);
+pub const CUBE_MESH: MeshId = MeshId(1);
 
 /// Id for accessing a mesh resource.
 #[derive(Clone, Copy)]
 pub struct MeshId(usize);
 
 /// Id for accessing a texture resource.
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub struct TextureId(usize);
 
 /// Data needed to render a mesh.
@@ -79,6 +91,7 @@ pub struct TextureId(usize);
 pub struct RenderOperation {
     pub transform: [[f32; 4]; 4],
     pub texture: TextureId,
+    pub uv_window: [f32; 4],
     pub mesh: MeshId,
 }
 
@@ -97,6 +110,8 @@ pub struct GraphicsContext {
     bind_groups_and_buffers: Vec<(BindGroup, Buffer)>,
     meshes: Vec<Mesh>,
     bind_groups_and_textures: Vec<(BindGroup, Texture)>,
+
+    depth_texture: Texture,
 }
 
 #[repr(C)]
@@ -109,6 +124,7 @@ struct GlobalBuffer {
 #[derive(Clone, Copy, Debug)]
 struct LocalBuffer {
     transform: [[f32; 4]; 4],
+    uv_window: [f32; 4],
 }
 
 unsafe impl Zeroable for GlobalBuffer {}
@@ -202,7 +218,18 @@ fn setup_pipeline(device: &Device) -> (BindGroupLayout, BindGroupLayout, RenderP
                 targets: &[
                     Some(ColorTargetState {
                         format: TextureFormat::Bgra8UnormSrgb,
-                        blend: Some(BlendState::ALPHA_BLENDING),
+                        blend: Some(BlendState {
+                            color: BlendComponent {
+                                src_factor: BlendFactor::SrcAlpha,
+                                dst_factor: BlendFactor::OneMinusSrcAlpha,
+                                operation: BlendOperation::Add,
+                            },
+                            alpha: BlendComponent {
+                                src_factor: BlendFactor::SrcAlpha,
+                                dst_factor: BlendFactor::DstAlpha,
+                                operation: BlendOperation::Max,
+                            },
+                        }),
                         write_mask: ColorWrites::ALL,
                     }),
                 ],
@@ -216,7 +243,13 @@ fn setup_pipeline(device: &Device) -> (BindGroupLayout, BindGroupLayout, RenderP
                 polygon_mode: PolygonMode::Fill,
                 conservative: false,
             },
-            depth_stencil: None,
+            depth_stencil: Some(DepthStencilState {
+                format: TextureFormat::Depth32Float,
+                depth_write_enabled: true,
+                depth_compare: CompareFunction::LessEqual,
+                stencil: Default::default(),
+                bias: Default::default(),
+            }),
             multisample: MultisampleState { count: 1, mask: !0, alpha_to_coverage_enabled: false },
             multiview: None,
         })
@@ -296,8 +329,8 @@ impl GraphicsContext {
                 address_mode_u: wgpu::AddressMode::ClampToEdge,
                 address_mode_v: wgpu::AddressMode::ClampToEdge,
                 address_mode_w: wgpu::AddressMode::ClampToEdge,
-                mag_filter: wgpu::FilterMode::Linear,
-                min_filter: wgpu::FilterMode::Nearest,
+                mag_filter: wgpu::FilterMode::Nearest,
+                min_filter: wgpu::FilterMode::Linear,
                 mipmap_filter: wgpu::FilterMode::Nearest,
                 ..Default::default()
             })
@@ -330,9 +363,61 @@ impl GraphicsContext {
             &[0, 1, 2, 1, 3, 2]
         );
 
+        let cube_mesh = Mesh::load(
+            &device,
+            &[
+                // Front Face
+                Vertex {
+                    position: [-0.5, 0.5, 0.5],
+                    normal: [0.0, 0.0, 1.0],
+                    texture_coordinates: [0.0, 0.0],
+                },
+                Vertex {
+                    position: [0.5, 0.5, 0.5],
+                    normal: [0.0, 0.0, 1.0],
+                    texture_coordinates: [1.0, 0.0],
+                },
+                Vertex {
+                    position: [-0.5, -1.5, 0.5],
+                    normal: [0.0, 0.0, 1.0],
+                    texture_coordinates: [0.0, 1.0],
+                },
+                Vertex {
+                    position: [0.5, -1.5, 0.5],
+                    normal: [0.0, 0.0, 1.0],
+                    texture_coordinates: [1.0, 1.0],
+                },
+
+                // Top Face
+                Vertex {
+                    position: [-0.5, 0.5, -0.5],
+                    normal: [0.0, 0.0, 1.0],
+                    texture_coordinates: [0.0, 0.0],
+                },
+                Vertex {
+                    position: [0.5, 0.5, -0.5],
+                    normal: [0.0, 0.0, 1.0],
+                    texture_coordinates: [1.0, 0.0],
+                },
+                Vertex {
+                    position: [-0.5, 0.5, 0.5],
+                    normal: [0.0, 0.0, 1.0],
+                    texture_coordinates: [0.0, 1.0],
+                },
+                Vertex {
+                    position: [0.5, 0.5, 0.5],
+                    normal: [0.0, 0.0, 1.0],
+                    texture_coordinates: [1.0, 1.0],
+                },
+            ],
+            &[0, 1, 2, 1, 3, 2, 0 + 4, 1 + 4, 2 + 4, 1 + 4, 3 + 4, 2 + 4]
+        );
+
         let bind_groups_and_buffers = Vec::new();
-        let meshes = vec![quad_mesh];
+        let meshes = vec![quad_mesh, cube_mesh];
         let bind_groups_and_textures = Vec::new();
+
+        let depth_texture = Texture::create_depth_texture(&device, (640, 480));
 
         Self {
             device,
@@ -349,6 +434,8 @@ impl GraphicsContext {
             bind_groups_and_buffers,
             meshes,
             bind_groups_and_textures,
+
+            depth_texture,
         }
     }
 
@@ -361,8 +448,8 @@ impl GraphicsContext {
     }
 
     /// Loads a texture and returns a [TextureId] that refers to it.
-    pub fn load_texture(&mut self, path: &str) -> Result<TextureId> {
-        let texture = Texture::load(&self.device, &self.queue, path)?;
+    pub fn load_texture(&mut self, bytes: &[u8]) -> Result<TextureId> {
+        let texture = Texture::load(&self.device, &self.queue, bytes)?;
         let bind_group = self.device.create_bind_group(
             &(BindGroupDescriptor {
                 label: None,
@@ -463,7 +550,11 @@ impl GraphicsContext {
                             },
                         }),
                     ],
-                    depth_stencil_attachment: None,
+                    depth_stencil_attachment: Some(RenderPassDepthStencilAttachment {
+                        view: &self.depth_texture.view,
+                        depth_ops: Some(Operations { load: LoadOp::Clear(1.0), store: true }),
+                        stencil_ops: None,
+                    }),
                 })
             );
 
@@ -477,6 +568,7 @@ impl GraphicsContext {
 
                 let local_buffer = LocalBuffer {
                     transform: operation.transform,
+                    uv_window: operation.uv_window,
                 };
                 self.queue.write_buffer(buffer, 0, bytes_of(&local_buffer));
                 render_pass.set_bind_group(0, bind_group, &[]);
@@ -510,5 +602,7 @@ impl GraphicsContext {
         self.surface_config.width = width;
         self.surface_config.height = height;
         self.surface.configure(&self.device, &self.surface_config);
+
+        self.depth_texture = Texture::create_depth_texture(&self.device, (width, height));
     }
 }

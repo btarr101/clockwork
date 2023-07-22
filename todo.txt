@@ -1,0 +1,2 @@
+- instancing / batching
+- sub_uv for instances instead

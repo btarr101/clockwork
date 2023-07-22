@@ -5,5 +5,6 @@ pub mod input;
 pub mod input_state;
 pub mod mesh;
 pub mod texture;
+pub mod texture_atlas;
 
 pub mod camera;

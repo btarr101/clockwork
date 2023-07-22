@@ -3,7 +3,8 @@ use std::{ time::Duration, cmp::{ min, max, Ordering } };
 use clockwork::{
     input_state::InputState,
     input::Key,
-    graphics_context::{ RenderOperation, QUAD_MESH, TextureId },
+    graphics_context::{ RenderOperation, QUAD_MESH },
+    texture_atlas::{ SpriteId, TextureAtlas, LazySpriteId },
 };
 use glam::{ IVec2, Mat4 };
 use num_traits::abs;
@@ -41,6 +42,9 @@ pub struct Player {
     /// Timer for "cayote time", where the player can still jump for a period of time after walking
     /// off a ledge.
     pub cayote_timer: u32,
+
+    /// Sprite used for the player
+    sprite: LazySpriteId,
 }
 
 impl Default for Player {
@@ -50,11 +54,12 @@ impl Default for Player {
             run_accel: 32,
             run_deccel: 16,
             jump_power: 450,
-            jump_buffering: Duration::from_millis(50),
+            jump_buffering: Duration::from_millis(100),
             cayote_time: 8,
             position: UnitVec2::ZERO,
             velocity: UnitVec2::ZERO,
             cayote_timer: 0,
+            sprite: LazySpriteId::new("dummy32x32.png", Some("White")),
         }
     }
 }
@@ -133,12 +138,16 @@ impl Player {
         }
     }
 
-    pub fn get_render_operation(&self, texture: TextureId) -> RenderOperation {
+    pub fn get_render_operation(&self, atlas: &TextureAtlas, frame: usize) -> RenderOperation {
+        let sprite = atlas.get_sprite_lazily(&self.sprite);
+        let uv_window = sprite.get_uv_window(frame);
+
         RenderOperation {
             transform: Mat4::from_translation(
                 self.position.to_render_vec2().extend(0.0)
             ).to_cols_array_2d(),
-            texture,
+            uv_window,
+            texture: sprite.texture,
             mesh: QUAD_MESH,
         }
     }

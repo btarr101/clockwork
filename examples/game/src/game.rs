@@ -3,8 +3,9 @@ use std::f32::consts::PI;
 use clockwork::{
     application::Application,
     camera::{ Camera, Projection },
-    graphics_context::{ RenderOperation, TextureId },
+    graphics_context::RenderOperation,
     engine::Engine,
+    texture_atlas::{ TextureAtlas, LazySpriteId },
 };
 use glam::{ Affine3A, IVec2, Vec3 };
 
@@ -18,16 +19,21 @@ use player::Player;
 
 use constants::UnitVec2Trait;
 
-use self::constants::TEXTURE_PATH;
+use self::constants::TEXTURE_BYTES;
 pub struct Game {
     camera: Camera,
     player: Player,
     tiles: Tiles,
-    texture: TextureId,
+    atlas: TextureAtlas,
+    frame: f32,
 }
 
 impl Application for Game {
     fn init(engine: &mut clockwork::engine::Engine) -> Self {
+        let mut atlas = TextureAtlas::new();
+        let texture = engine.graphics_context.load_texture(TEXTURE_BYTES).unwrap();
+        atlas.add_aseprite_sprites(include_str!("../res/dummy32x32.json"), texture);
+
         Self {
             camera: Camera::new(
                 Affine3A::from_translation(Vec3 { x: 0.0, y: 0.0, z: 10.0 }),
@@ -61,18 +67,22 @@ impl Application for Game {
                     [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 1],
                     [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
                 ],
+                sprite: LazySpriteId::new("dummy32x32.png", Some("Black")),
             },
-            texture: engine.graphics_context.load_texture(TEXTURE_PATH).unwrap(),
+            atlas,
+            frame: 0.0,
         }
     }
 
     fn update(&mut self, engine: &mut Engine, _delta: f64) {
         self.player.update(&self.tiles, &engine.input_state);
 
-        let mut render_ops: Vec<RenderOperation> = self.tiles
-            .get_render_operations(self.texture)
+        let render_ops: Vec<RenderOperation> = self.tiles
+            .get_render_operations(&self.atlas)
+            .chain(
+                std::iter::once(self.player.get_render_operation(&self.atlas, self.frame as usize))
+            )
             .collect();
-        render_ops.push(self.player.get_render_operation(self.texture));
 
         let camera_translation_target = self.player.position
             .to_render_vec2()
@@ -86,7 +96,9 @@ impl Application for Game {
         engine.graphics_context.perform_render_pass(
             self.camera.get_view_projection_matrix().to_cols_array_2d(),
             render_ops.as_slice()
-        )
+        );
+
+        self.frame += 0.1;
     }
 
     fn on_window_resize(&mut self, _engine: &mut Engine, new_width: u32, new_height: u32) {

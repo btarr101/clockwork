@@ -17,6 +17,7 @@ var<uniform> global: Global;
 
 struct Local {
     transform: mat4x4<f32>,
+    uv_window: vec4<f32>,
 }
 @group(0) @binding(1)
 var<uniform> local: Local;
@@ -35,7 +36,7 @@ fn vs_main(
     var out: VertexOutput;
     let vertex_transform = local.transform * vec4<f32>(in.position, 1.0);
     out.clip_position = global.mvp * vertex_transform;
-    out.uv = in.uv;
+    out.uv = local.uv_window.xy + (local.uv_window.zw * in.uv);
     return out;
 }
 

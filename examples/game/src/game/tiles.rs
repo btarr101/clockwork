@@ -1,4 +1,7 @@
-use clockwork::graphics_context::{ RenderOperation, QUAD_MESH, TextureId };
+use clockwork::{
+    graphics_context::{ RenderOperation, QUAD_MESH, CUBE_MESH },
+    texture_atlas::{ TextureAtlas, LazySpriteId },
+};
 use glam::{ IVec2, Mat4 };
 
 use super::{ constants::{ UnitVec2, UNITS_PER_TILE, UnitVec2Trait }, aabb::Aabb };
@@ -6,6 +9,7 @@ use super::{ constants::{ UnitVec2, UNITS_PER_TILE, UnitVec2Trait }, aabb::Aabb 
 pub struct Tiles {
     pub position: UnitVec2,
     pub map: [[u32; Self::COLS as usize]; Self::ROWS as usize],
+    pub sprite: LazySpriteId,
 }
 
 impl Tiles {
@@ -63,8 +67,10 @@ impl Tiles {
 
     pub fn get_render_operations(
         &self,
-        texture: TextureId
+        atlas: &TextureAtlas
     ) -> impl Iterator<Item = RenderOperation> + '_ {
+        let sprite = *atlas.get_sprite_lazily(&self.sprite);
+
         let tiles = self.map
             .as_slice()
             .iter()
@@ -84,8 +90,9 @@ impl Tiles {
                     transform: Mat4::from_translation(
                         position.to_render_vec2().extend(0.0)
                     ).to_cols_array_2d(),
-                    texture,
-                    mesh: QUAD_MESH,
+                    uv_window: sprite.get_uv_window(0),
+                    texture: sprite.texture,
+                    mesh: CUBE_MESH,
                 })
             } else {
                 None
