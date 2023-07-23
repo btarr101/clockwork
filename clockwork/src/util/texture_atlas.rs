@@ -9,6 +9,8 @@ pub struct SpriteId(usize);
 
 /// Id for accessing a sprite from a [TextureAtlas], however,
 /// it's initialized with the sprite metadata rather than the raw Id.
+///
+/// This is typically the much easier construct to use.
 pub struct LazySpriteId(Cell<LazySpriteIdState>);
 
 #[derive(Clone, Copy)]

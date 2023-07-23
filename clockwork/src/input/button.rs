@@ -1,5 +1,3 @@
-use num_derive::FromPrimitive;
-
 pub const BUTTONS: usize = MAX_MOUSEBUTTON + MAX_KEY;
 
 // Note, very importantly with this current implementation, I'm sad to say this
@@ -10,7 +8,7 @@ pub enum Button {
 }
 
 /// Possible mouse button inputs.
-#[derive(Clone, Copy, FromPrimitive)]
+#[derive(Clone, Copy, num_derive::FromPrimitive)]
 pub enum Mouse {
     Left,
     Right,
@@ -21,7 +19,7 @@ pub enum Mouse {
 pub const MAX_MOUSEBUTTON: usize = Mouse::Middle as usize;
 
 /// Possible keyboard button inputs.
-#[derive(Clone, Copy, FromPrimitive)]
+#[derive(Clone, Copy, num_derive::FromPrimitive)]
 pub enum Keyboard {
     /// The '1' key over the letters.
     Key1,

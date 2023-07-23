@@ -101,8 +101,8 @@ impl Application for Game {
         self.frame += 0.1;
     }
 
-    fn on_window_resize(&mut self, _engine: &mut Engine, new_size: (u32, u32)) {
-        let new_aspect = (new_size.0 as f32) / (new_size.1 as f32);
+    fn on_window_resize(&mut self, _engine: &mut Engine, new_size: glam::UVec2) {
+        let new_aspect = (new_size.x as f32) / (new_size.y as f32);
         match self.camera.mut_projection() {
             Projection::Perspective { aspect, .. } => {
                 *aspect = new_aspect;

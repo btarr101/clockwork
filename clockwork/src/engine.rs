@@ -23,7 +23,7 @@ pub trait Application: 'static {
     // callbacks
     /// Called whenever the application window is resized.
     #[allow(unused_variables)]
-    fn on_window_resize(&mut self, engine: &mut Engine, new_size: (u32, u32)) {}
+    fn on_window_resize(&mut self, engine: &mut Engine, new_size: glam::UVec2) {}
 }
 
 impl Engine {
@@ -84,7 +84,7 @@ impl Engine {
                         }
                         WindowEvent::CloseRequested => control_flow.set_exit(),
                         WindowEvent::Resized(PhysicalSize { width, height }) => {
-                            let new_size = (width, height);
+                            let new_size = glam::UVec2 { x: width, y: height };
                             engine.graphics_context.resize_surface(new_size);
                             app.on_window_resize(&mut engine, new_size);
                         }

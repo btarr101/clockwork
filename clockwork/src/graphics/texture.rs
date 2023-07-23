@@ -1,74 +1,65 @@
-use image::load_from_memory;
-use anyhow::Result;
-use wgpu::{
-    Texture as WGPUTexture,
-    TextureView,
-    Device,
-    util::DeviceExt,
-    Queue,
-    Extent3d,
-    TextureDimension,
-    TextureFormat,
-    TextureUsages,
-    TextureDescriptor,
-    TextureViewDescriptor,
-};
+use wgpu::util::DeviceExt;
 
 pub(crate) struct Texture {
     #[allow(unused)]
-    texture: WGPUTexture,
-    pub view: TextureView,
+    texture: wgpu::Texture,
+    pub view: wgpu::TextureView,
 }
 
 impl Texture {
-    pub(crate) fn load(device: &Device, queue: &Queue, bytes: &[u8]) -> Result<Texture> {
-        let image = load_from_memory(bytes)?;
+    pub(crate) fn load(
+        device: &wgpu::Device,
+        queue: &wgpu::Queue,
+        bytes: &[u8]
+    ) -> anyhow::Result<Texture> {
+        let image = image::load_from_memory(bytes)?;
         let bytes = image.to_rgba8();
 
         let texture = device.create_texture_with_data(
             queue,
-            &(TextureDescriptor {
+            &(wgpu::TextureDescriptor {
                 label: None,
-                size: Extent3d {
+                size: wgpu::Extent3d {
                     width: image.width(),
                     height: image.height(),
                     depth_or_array_layers: 1,
                 },
                 mip_level_count: 1,
                 sample_count: 1,
-                dimension: TextureDimension::D2,
-                format: TextureFormat::Rgba8UnormSrgb,
-                usage: TextureUsages::TEXTURE_BINDING,
+                dimension: wgpu::TextureDimension::D2,
+                format: wgpu::TextureFormat::Rgba8UnormSrgb,
+                usage: wgpu::TextureUsages::TEXTURE_BINDING,
                 view_formats: &[],
             }),
             &bytes
         );
 
-        let view = texture.create_view(&TextureViewDescriptor::default());
+        let view = texture.create_view(&wgpu::TextureViewDescriptor::default());
 
         Ok(Self { texture, view })
     }
 
     /// Creates a [Texture] used for depth buffering.
-    pub(crate) fn create_depth_texture(device: &Device, size: (u32, u32)) -> Texture {
+    pub(crate) fn create_depth_texture(device: &wgpu::Device, size: glam::UVec2) -> Texture {
         let texture = device.create_texture(
-            &(TextureDescriptor {
+            &(wgpu::TextureDescriptor {
                 label: None,
-                size: Extent3d {
-                    width: size.0,
-                    height: size.1,
+                size: wgpu::Extent3d {
+                    width: size.x,
+                    height: size.y,
                     depth_or_array_layers: 1,
                 },
                 mip_level_count: 1,
                 sample_count: 1,
-                dimension: TextureDimension::D2,
-                format: TextureFormat::Depth32Float,
-                usage: TextureUsages::RENDER_ATTACHMENT | TextureUsages::TEXTURE_BINDING,
+                dimension: wgpu::TextureDimension::D2,
+                format: wgpu::TextureFormat::Depth32Float,
+                usage: wgpu::TextureUsages::RENDER_ATTACHMENT |
+                wgpu::TextureUsages::TEXTURE_BINDING,
                 view_formats: &[],
             })
         );
 
-        let view = texture.create_view(&TextureViewDescriptor::default());
+        let view = texture.create_view(&wgpu::TextureViewDescriptor::default());
         Self { texture, view }
     }
 }

@@ -1,7 +1,5 @@
 use std::cell::RefCell;
 
-use glam::{ Affine3A, Mat4 };
-
 #[derive(Clone, Copy)]
 pub enum Projection {
     Perspective {
@@ -14,24 +12,24 @@ pub enum Projection {
 
 /// Helper for generating a view projection matrix (the model comes later)
 pub struct Camera {
-    pub affine: Affine3A,
+    pub affine: glam::Affine3A,
 
     projection: Projection,
-    projection_mat: RefCell<Option<Mat4>>,
+    projection_mat: RefCell<Option<glam::Mat4>>,
 }
 
 impl Projection {
-    fn to_matrix(self) -> Mat4 {
+    fn to_matrix(self) -> glam::Mat4 {
         match self {
             Projection::Perspective { aspect, fov, znear, zfar } =>
-                Mat4::perspective_rh(fov, aspect, znear, zfar),
+                glam::Mat4::perspective_rh(fov, aspect, znear, zfar),
         }
     }
 }
 
 impl Camera {
     /// Creates a new [Camera] with the given projection.
-    pub fn new(affine: Affine3A, projection: Projection) -> Self {
+    pub fn new(affine: glam::Affine3A, projection: Projection) -> Self {
         Self {
             affine,
             projection,
@@ -50,7 +48,7 @@ impl Camera {
     }
 
     /// Gets the current view projection matrix for this [Camera].
-    pub fn get_view_projection_matrix(&self) -> Mat4 {
+    pub fn get_view_projection_matrix(&self) -> glam::Mat4 {
         let projection_mat = *self.projection_mat
             .borrow_mut()
             .get_or_insert_with(|| self.projection.to_matrix());

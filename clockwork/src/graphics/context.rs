@@ -273,24 +273,24 @@ impl Context {
             &device,
             &[
                 Vertex {
-                    position: [-0.5, 0.5, 0.0],
-                    normal: [0.0, 0.0, 1.0],
-                    texture_coordinates: [0.0, 0.0],
+                    position: glam::vec3(-0.5, 0.5, 0.0),
+                    normal: glam::vec3(0.0, 0.0, 1.0),
+                    texture_coordinates: glam::vec2(0.0, 0.0),
                 },
                 Vertex {
-                    position: [0.5, 0.5, 0.0],
-                    normal: [0.0, 0.0, 1.0],
-                    texture_coordinates: [1.0, 0.0],
+                    position: glam::vec3(0.5, 0.5, 0.0),
+                    normal: glam::vec3(0.0, 0.0, 1.0),
+                    texture_coordinates: glam::vec2(1.0, 0.0),
                 },
                 Vertex {
-                    position: [-0.5, -0.5, 0.0],
-                    normal: [0.0, 0.0, 1.0],
-                    texture_coordinates: [0.0, 1.0],
+                    position: glam::vec3(-0.5, -0.5, 0.0),
+                    normal: glam::vec3(0.0, 0.0, 1.0),
+                    texture_coordinates: glam::vec2(0.0, 1.0),
                 },
                 Vertex {
-                    position: [0.5, -0.5, 0.0],
-                    normal: [0.0, 0.0, 1.0],
-                    texture_coordinates: [1.0, 1.0],
+                    position: glam::vec3(0.5, -0.5, 0.0),
+                    normal: glam::vec3(0.0, 0.0, 1.0),
+                    texture_coordinates: glam::vec2(1.0, 1.0),
                 },
             ],
             &[0, 1, 2, 1, 3, 2]
@@ -301,46 +301,46 @@ impl Context {
             &[
                 // Front Face
                 Vertex {
-                    position: [-0.5, 0.5, 0.5],
-                    normal: [0.0, 0.0, 1.0],
-                    texture_coordinates: [0.0, 0.0],
+                    position: glam::vec3(-0.5, 0.5, 0.5),
+                    normal: glam::vec3(0.0, 0.0, 1.0),
+                    texture_coordinates: glam::vec2(0.0, 0.0),
                 },
                 Vertex {
-                    position: [0.5, 0.5, 0.5],
-                    normal: [0.0, 0.0, 1.0],
-                    texture_coordinates: [1.0, 0.0],
+                    position: glam::vec3(0.5, 0.5, 0.5),
+                    normal: glam::vec3(0.0, 0.0, 1.0),
+                    texture_coordinates: glam::vec2(1.0, 0.0),
                 },
                 Vertex {
-                    position: [-0.5, -0.5, 0.5],
-                    normal: [0.0, 0.0, 1.0],
-                    texture_coordinates: [0.0, 1.0],
+                    position: glam::vec3(-0.5, -0.5, 0.5),
+                    normal: glam::vec3(0.0, 0.0, 1.0),
+                    texture_coordinates: glam::vec2(0.0, 1.0),
                 },
                 Vertex {
-                    position: [0.5, -0.5, 0.5],
-                    normal: [0.0, 0.0, 1.0],
-                    texture_coordinates: [1.0, 1.0],
+                    position: glam::vec3(0.5, -0.5, 0.5),
+                    normal: glam::vec3(0.0, 0.0, 1.0),
+                    texture_coordinates: glam::vec2(1.0, 1.0),
                 },
 
                 // Top Face
                 Vertex {
-                    position: [-0.5, 0.5, -0.5],
-                    normal: [0.0, 0.0, 1.0],
-                    texture_coordinates: [0.0, 0.0],
+                    position: glam::vec3(-0.5, 0.5, -0.5),
+                    normal: glam::vec3(0.0, 0.0, 1.0),
+                    texture_coordinates: glam::vec2(0.0, 0.0),
                 },
                 Vertex {
-                    position: [0.5, 0.5, -0.5],
-                    normal: [0.0, 0.0, 1.0],
-                    texture_coordinates: [1.0, 0.0],
+                    position: glam::vec3(0.5, 0.5, -0.5),
+                    normal: glam::vec3(0.0, 0.0, 1.0),
+                    texture_coordinates: glam::vec2(1.0, 0.0),
                 },
                 Vertex {
-                    position: [-0.5, 0.5, 0.5],
-                    normal: [0.0, 0.0, 1.0],
-                    texture_coordinates: [0.0, 1.0],
+                    position: glam::vec3(-0.5, 0.5, 0.5),
+                    normal: glam::vec3(0.0, 0.0, 1.0),
+                    texture_coordinates: glam::vec2(0.0, 1.0),
                 },
                 Vertex {
-                    position: [0.5, 0.5, 0.5],
-                    normal: [0.0, 0.0, 1.0],
-                    texture_coordinates: [1.0, 1.0],
+                    position: glam::vec3(0.5, 0.5, 0.5),
+                    normal: glam::vec3(0.0, 0.0, 1.0),
+                    texture_coordinates: glam::vec2(1.0, 1.0),
                 },
             ],
             &[0, 1, 2, 1, 3, 2, 4, 1 + 4, 2 + 4, 1 + 4, 3 + 4, 2 + 4]
@@ -350,7 +350,7 @@ impl Context {
         let meshes = vec![quad_mesh, cube_mesh];
         let bind_groups_and_textures = Vec::new();
 
-        let depth_texture = Texture::create_depth_texture(&device, (640, 480));
+        let depth_texture = Texture::create_depth_texture(&device, glam::UVec2 { x: 640, y: 480 });
 
         Self {
             device,
@@ -537,9 +537,9 @@ impl Context {
     }
 
     /// Resizes the surface that is rendered to.
-    pub(crate) fn resize_surface(&mut self, new_size: (u32, u32)) {
-        self.surface_config.width = new_size.0;
-        self.surface_config.height = new_size.1;
+    pub(crate) fn resize_surface(&mut self, new_size: glam::UVec2) {
+        self.surface_config.width = new_size.x;
+        self.surface_config.height = new_size.y;
         self.surface.configure(&self.device, &self.surface_config);
 
         self.depth_texture = Texture::create_depth_texture(&self.device, new_size);
