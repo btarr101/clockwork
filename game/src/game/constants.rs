@@ -11,7 +11,8 @@ pub const UNITS_PER_RENDER_UNIT: Unit = 1000;
 pub const UNITS_PER_TILE: Unit = 1000;
 
 // TEMP
-pub const TEXTURE_BYTES: &[u8] = include_bytes!("../../res/dummy32x32.png");
+pub const PLAYER_TEXTURE: &[u8] = include_bytes!("../../res/dummy32x32.png");
+pub const BLOCK_TEXTURE: &[u8] = include_bytes!("../../res/block.png");
 
 /// Trait for the smalles unit in the game.
 pub trait UnitTrait {

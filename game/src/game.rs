@@ -19,7 +19,8 @@ use player::Player;
 
 use constants::UnitVec2Trait;
 
-use self::constants::TEXTURE_BYTES;
+use self::constants::{ PLAYER_TEXTURE, BLOCK_TEXTURE };
+
 pub struct Game {
     camera: Camera,
     player: Player,
@@ -31,8 +32,10 @@ pub struct Game {
 impl Application for Game {
     fn init(engine: &mut Engine) -> Self {
         let mut atlas = TextureAtlas::new();
-        let texture = engine.graphics_context.load_texture(TEXTURE_BYTES).unwrap();
-        atlas.add_aseprite_sprites(include_str!("../res/dummy32x32.json"), texture);
+        let player_texture = engine.graphics_context.load_texture(PLAYER_TEXTURE).unwrap();
+        let block_texture = engine.graphics_context.load_texture(BLOCK_TEXTURE).unwrap();
+        atlas.add_aseprite_sprites(include_str!("../res/dummy32x32.json"), player_texture);
+        atlas.add_aseprite_sprites(include_str!("../res/block.json"), block_texture);
 
         Self {
             camera: Camera::new(
@@ -67,7 +70,7 @@ impl Application for Game {
                     [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 1],
                     [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
                 ],
-                sprite: LazySpriteId::new("dummy32x32.png", Some("Black")),
+                sprite: LazySpriteId::new("block.png", None),
             },
             atlas,
             frame: 0.0,

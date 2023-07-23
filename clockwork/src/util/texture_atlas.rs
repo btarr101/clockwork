@@ -41,7 +41,7 @@ pub struct TextureAtlas {
 // ####################################
 #[derive(Deserialize)]
 struct Tag {
-    name: String,
+    name: Option<String>,
     from: usize,
     to: usize,
 }
@@ -89,14 +89,6 @@ impl TextureAtlas {
             })
             .unwrap();
 
-        let tags = meta
-            .get("frameTags")
-            .unwrap()
-            .as_array()
-            .unwrap()
-            .iter()
-            .map(|value| serde_json::from_value::<Tag>(value.clone()).unwrap());
-
         let frames: Vec<Frame> = aseprite_json
             .get("frames")
             .unwrap()
@@ -108,7 +100,18 @@ impl TextureAtlas {
             )
             .collect();
 
-        let sprites_and_tags = tags.map(|tag| {
+        let tag_array = meta.get("frameTags").unwrap().as_array().unwrap();
+
+        let tags: Vec<Tag> = match tag_array.is_empty() {
+            true => vec![Tag { name: None, from: 0, to: frames.len() - 1 }],
+            false =>
+                tag_array
+                    .iter()
+                    .map(|value| serde_json::from_value::<Tag>(value.clone()).unwrap())
+                    .collect(),
+        };
+
+        let sprites_and_tags = tags.iter().map(|tag| {
             let first_frame = &frames[tag.from];
             let uv_topleft = [
                 ((first_frame.x as f64) / dimensions.0) as f32,
@@ -127,11 +130,11 @@ impl TextureAtlas {
                 frames,
             };
 
-            (tag.name, sprite)
+            (tag.name.clone(), sprite)
         });
 
         sprites_and_tags.for_each(|(tag, sprite)| {
-            self.add_sprite(sprite, image, Some(tag.as_str()));
+            self.add_sprite(sprite, image, tag.as_deref());
         });
     }
 
