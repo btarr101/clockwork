@@ -36,7 +36,7 @@ fn vs_main(
     var out: VertexOutput;
     let vertex_transform = local.transform * vec4<f32>(in.position, 1.0);
     out.clip_position = global.mvp * vertex_transform;
-    out.uv = local.uv_window.xy + (local.uv_window.zw * in.uv);
+    out.uv = local.uv_window.xy + vec2(0.01, 0.01) + ((local.uv_window.zw - vec2(0.01, 0.01)) * in.uv);
     return out;
 }
 
@@ -45,5 +45,10 @@ fn vs_main(
 fn fs_main(
     in: VertexOutput,    
 ) -> @location(0) vec4<f32> {
-    return textureSample(texture, texture_sampler, in.uv);
+    let sample = textureSample(texture, texture_sampler, in.uv);
+    if (sample.w < 0.001) {
+        discard;
+    }
+    
+    return sample;
 }

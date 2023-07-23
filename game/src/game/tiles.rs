@@ -1,6 +1,6 @@
 use clockwork::{
-    graphics_context::{ RenderOperation, QUAD_MESH, CUBE_MESH },
-    texture_atlas::{ TextureAtlas, LazySpriteId },
+    graphics::{ RenderOperation, CUBE_MESH },
+    util::texture_atlas::{ TextureAtlas, LazySpriteId },
 };
 use glam::{ IVec2, Mat4 };
 
@@ -67,7 +67,8 @@ impl Tiles {
 
     pub fn get_render_operations(
         &self,
-        atlas: &TextureAtlas
+        atlas: &TextureAtlas,
+        frame: usize
     ) -> impl Iterator<Item = RenderOperation> + '_ {
         let sprite = *atlas.get_sprite_lazily(&self.sprite);
 
@@ -90,7 +91,7 @@ impl Tiles {
                     transform: Mat4::from_translation(
                         position.to_render_vec2().extend(0.0)
                     ).to_cols_array_2d(),
-                    uv_window: sprite.get_uv_window(0),
+                    uv_window: sprite.get_uv_window(frame),
                     texture: sprite.texture,
                     mesh: CUBE_MESH,
                 })

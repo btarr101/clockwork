@@ -3,6 +3,5 @@ resolver = "2"
 
 members = [
     "clockwork",
-    "examples/hello_world",
-    "examples/game"
+    "game"
 ]

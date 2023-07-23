@@ -1,7 +1,7 @@
 use std::{ collections::HashMap, cell::Cell };
 use serde::Deserialize;
 use serde_json::Value;
-use crate::graphics_context::TextureId;
+use crate::graphics::TextureId;
 
 /// Id for accessing a sprite from a [TextureAtlas].
 #[derive(Debug, Clone, Copy)]

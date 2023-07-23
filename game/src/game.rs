@@ -1,11 +1,11 @@
 use std::f32::consts::PI;
 
 use clockwork::{
-    application::Application,
-    camera::{ Camera, Projection },
-    graphics_context::RenderOperation,
-    engine::Engine,
-    texture_atlas::{ TextureAtlas, LazySpriteId },
+    Application,
+    util::camera::{ Camera, Projection },
+    graphics::RenderOperation,
+    Engine,
+    util::texture_atlas::{ TextureAtlas, LazySpriteId },
 };
 use glam::{ Affine3A, IVec2, Vec3 };
 
@@ -29,7 +29,7 @@ pub struct Game {
 }
 
 impl Application for Game {
-    fn init(engine: &mut clockwork::engine::Engine) -> Self {
+    fn init(engine: &mut Engine) -> Self {
         let mut atlas = TextureAtlas::new();
         let texture = engine.graphics_context.load_texture(TEXTURE_BYTES).unwrap();
         atlas.add_aseprite_sprites(include_str!("../res/dummy32x32.json"), texture);
@@ -78,7 +78,7 @@ impl Application for Game {
         self.player.update(&self.tiles, &engine.input_state);
 
         let render_ops: Vec<RenderOperation> = self.tiles
-            .get_render_operations(&self.atlas)
+            .get_render_operations(&self.atlas, self.frame as usize)
             .chain(
                 std::iter::once(self.player.get_render_operation(&self.atlas, self.frame as usize))
             )
@@ -101,8 +101,8 @@ impl Application for Game {
         self.frame += 0.1;
     }
 
-    fn on_window_resize(&mut self, _engine: &mut Engine, new_width: u32, new_height: u32) {
-        let new_aspect = (new_width as f32) / (new_height as f32);
+    fn on_window_resize(&mut self, _engine: &mut Engine, new_size: (u32, u32)) {
+        let new_aspect = (new_size.0 as f32) / (new_size.1 as f32);
         match self.camera.mut_projection() {
             Projection::Perspective { aspect, .. } => {
                 *aspect = new_aspect;

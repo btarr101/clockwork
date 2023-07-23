@@ -1,10 +1,10 @@
 use std::{ time::Duration, cmp::{ min, max, Ordering } };
 
 use clockwork::{
-    input_state::InputState,
-    input::Key,
-    graphics_context::{ RenderOperation, QUAD_MESH },
-    texture_atlas::{ SpriteId, TextureAtlas, LazySpriteId },
+    input::InputState,
+    input::Keyboard,
+    graphics::{ RenderOperation, QUAD_MESH },
+    util::texture_atlas::{ TextureAtlas, LazySpriteId },
 };
 use glam::{ IVec2, Mat4 };
 use num_traits::abs;
@@ -67,9 +67,9 @@ impl Default for Player {
 impl Player {
     /// Applies input to the player, as well as handles collisions with tiles.
     pub fn update(&mut self, tiles: &Tiles, input_state: &InputState) {
-        let right = input_state.check_pressed(Key::D) as Unit;
-        let left = input_state.check_pressed(Key::A) as Unit;
-        let jump = input_state.check_pressed_within(Key::Space, self.jump_buffering);
+        let right = input_state.check_pressed(Keyboard::D) as Unit;
+        let left = input_state.check_pressed(Keyboard::A) as Unit;
+        let jump = input_state.check_pressed_within(Keyboard::Space, self.jump_buffering);
 
         // Modify Velocity
         // =======================================================================

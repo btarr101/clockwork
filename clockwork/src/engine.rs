@@ -5,17 +5,25 @@ use winit::{
     dpi::PhysicalSize,
 };
 
-use crate::{
-    graphics_context::GraphicsContext,
-    application::Application,
-    input_state::InputState,
-    input::{ Key, MouseButton },
-};
+use crate::{ graphics::Context, input::InputState, input::{ Keyboard, Mouse } };
 
 pub struct Engine {
     pub window: Window,
-    pub graphics_context: GraphicsContext,
+    pub graphics_context: Context,
     pub input_state: InputState,
+}
+
+pub trait Application: 'static {
+    /// Called when the application is initialized.
+    fn init(engine: &mut Engine) -> Self;
+
+    /// Called right before a frame renders.
+    fn update(&mut self, engine: &mut Engine, delta: f64);
+
+    // callbacks
+    /// Called whenever the application window is resized.
+    #[allow(unused_variables)]
+    fn on_window_resize(&mut self, engine: &mut Engine, new_size: (u32, u32)) {}
 }
 
 impl Engine {
@@ -28,7 +36,7 @@ impl Engine {
             .unwrap();
 
         let size = window.inner_size();
-        let graphics_context = GraphicsContext::new(&window, size.width, size.height);
+        let graphics_context = Context::new(&window, size.width, size.height);
 
         let input_state = InputState::new();
 
@@ -49,17 +57,19 @@ impl Engine {
                             is_synthetic: false,
                             ..
                         } => {
-                            let key: Key = num::FromPrimitive::from_u32(keycode as u32).unwrap();
+                            let key: Keyboard = num::FromPrimitive
+                                ::from_u32(keycode as u32)
+                                .unwrap();
                             match state {
                                 ElementState::Pressed => engine.input_state.signal_press_of(key),
                                 ElementState::Released => engine.input_state.signal_release_of(key),
                             }
                         }
                         WindowEvent::MouseInput { button, state, .. } => {
-                            let button: Option<MouseButton> = match button {
-                                event::MouseButton::Left => Some(MouseButton::Left),
-                                event::MouseButton::Right => Some(MouseButton::Right),
-                                event::MouseButton::Middle => Some(MouseButton::Middle),
+                            let button: Option<Mouse> = match button {
+                                event::MouseButton::Left => Some(Mouse::Left),
+                                event::MouseButton::Right => Some(Mouse::Right),
+                                event::MouseButton::Middle => Some(Mouse::Middle),
                                 _ => None,
                             };
 
@@ -74,8 +84,9 @@ impl Engine {
                         }
                         WindowEvent::CloseRequested => control_flow.set_exit(),
                         WindowEvent::Resized(PhysicalSize { width, height }) => {
-                            engine.graphics_context.resize_surface(width, height);
-                            app.on_window_resize(&mut engine, width, height);
+                            let new_size = (width, height);
+                            engine.graphics_context.resize_surface(new_size);
+                            app.on_window_resize(&mut engine, new_size);
                         }
                         _ => (),
                     }

@@ -1,4 +1,3 @@
-use clockwork::texture_atlas::SpriteId;
 use glam::{ Vec2, IVec2 };
 
 /// Type for the smallest unit in the game.
@@ -13,7 +12,6 @@ pub const UNITS_PER_TILE: Unit = 1000;
 
 // TEMP
 pub const TEXTURE_BYTES: &[u8] = include_bytes!("../../res/dummy32x32.png");
-pub const DUMMY: &str = "dummy32x32.png";
 
 /// Trait for the smalles unit in the game.
 pub trait UnitTrait {
