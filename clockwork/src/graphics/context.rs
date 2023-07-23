@@ -4,13 +4,7 @@ use raw_window_handle::{ HasRawWindowHandle, HasRawDisplayHandle };
 use anyhow::Result;
 use wgpu::util::DeviceExt;
 
-use super::{ mesh::{ Vertex, Index, Mesh, VERTEX_BUFFER_LAYOUT }, texture::Texture };
-
-/// MeshId for a square mesh.
-// Note that an actually qaud mesh is pushed onto meshes
-// when the context is created, and this is tied to that.
-pub const QUAD_MESH: MeshId = MeshId(0);
-pub const CUBE_MESH: MeshId = MeshId(1);
+use super::{ mesh::{ Mesh, VERTEX_BUFFER_LAYOUT, MeshData }, texture::Texture };
 
 /// Id for accessing a mesh resource.
 #[derive(Clone, Copy)]
@@ -163,7 +157,7 @@ fn setup_pipeline(
                 topology: wgpu::PrimitiveTopology::TriangleList,
                 strip_index_format: None,
                 front_face: wgpu::FrontFace::Ccw,
-                cull_mode: None,
+                cull_mode: Some(wgpu::Face::Back),
                 unclipped_depth: false,
                 polygon_mode: wgpu::PolygonMode::Fill,
                 conservative: false,
@@ -269,85 +263,8 @@ impl Context {
             })
         );
 
-        let quad_mesh = Mesh::load(
-            &device,
-            &[
-                Vertex {
-                    position: glam::vec3(-0.5, 0.5, 0.0),
-                    normal: glam::vec3(0.0, 0.0, 1.0),
-                    texture_coordinates: glam::vec2(0.0, 0.0),
-                },
-                Vertex {
-                    position: glam::vec3(0.5, 0.5, 0.0),
-                    normal: glam::vec3(0.0, 0.0, 1.0),
-                    texture_coordinates: glam::vec2(1.0, 0.0),
-                },
-                Vertex {
-                    position: glam::vec3(-0.5, -0.5, 0.0),
-                    normal: glam::vec3(0.0, 0.0, 1.0),
-                    texture_coordinates: glam::vec2(0.0, 1.0),
-                },
-                Vertex {
-                    position: glam::vec3(0.5, -0.5, 0.0),
-                    normal: glam::vec3(0.0, 0.0, 1.0),
-                    texture_coordinates: glam::vec2(1.0, 1.0),
-                },
-            ],
-            &[0, 1, 2, 1, 3, 2]
-        );
-
-        let cube_mesh = Mesh::load(
-            &device,
-            &[
-                // Front Face
-                Vertex {
-                    position: glam::vec3(-0.5, 0.5, 0.5),
-                    normal: glam::vec3(0.0, 0.0, 1.0),
-                    texture_coordinates: glam::vec2(0.0, 0.0),
-                },
-                Vertex {
-                    position: glam::vec3(0.5, 0.5, 0.5),
-                    normal: glam::vec3(0.0, 0.0, 1.0),
-                    texture_coordinates: glam::vec2(1.0, 0.0),
-                },
-                Vertex {
-                    position: glam::vec3(-0.5, -0.5, 0.5),
-                    normal: glam::vec3(0.0, 0.0, 1.0),
-                    texture_coordinates: glam::vec2(0.0, 1.0),
-                },
-                Vertex {
-                    position: glam::vec3(0.5, -0.5, 0.5),
-                    normal: glam::vec3(0.0, 0.0, 1.0),
-                    texture_coordinates: glam::vec2(1.0, 1.0),
-                },
-
-                // Top Face
-                Vertex {
-                    position: glam::vec3(-0.5, 0.5, -0.5),
-                    normal: glam::vec3(0.0, 0.0, 1.0),
-                    texture_coordinates: glam::vec2(0.0, 0.0),
-                },
-                Vertex {
-                    position: glam::vec3(0.5, 0.5, -0.5),
-                    normal: glam::vec3(0.0, 0.0, 1.0),
-                    texture_coordinates: glam::vec2(1.0, 0.0),
-                },
-                Vertex {
-                    position: glam::vec3(-0.5, 0.5, 0.5),
-                    normal: glam::vec3(0.0, 0.0, 1.0),
-                    texture_coordinates: glam::vec2(0.0, 1.0),
-                },
-                Vertex {
-                    position: glam::vec3(0.5, 0.5, 0.5),
-                    normal: glam::vec3(0.0, 0.0, 1.0),
-                    texture_coordinates: glam::vec2(1.0, 1.0),
-                },
-            ],
-            &[0, 1, 2, 1, 3, 2, 4, 1 + 4, 2 + 4, 1 + 4, 3 + 4, 2 + 4]
-        );
-
         let bind_groups_and_buffers = Vec::new();
-        let meshes = vec![quad_mesh, cube_mesh];
+        let meshes = Vec::new();
         let bind_groups_and_textures = Vec::new();
 
         let depth_texture = Texture::create_depth_texture(&device, glam::UVec2 { x: 640, y: 480 });
@@ -373,8 +290,8 @@ impl Context {
     }
 
     /// Loads a mesh and returns a [MeshId] that refers to it.
-    pub fn load_mesh(&mut self, vertices: &[Vertex], indices: &[Index]) -> MeshId {
-        let mesh = Mesh::load(&self.device, vertices, indices);
+    pub fn load_mesh(&mut self, mesh_data: MeshData) -> MeshId {
+        let mesh = Mesh::load(&self.device, mesh_data);
         let id = MeshId(self.meshes.len());
         self.meshes.push(mesh);
         id

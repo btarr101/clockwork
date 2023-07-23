@@ -1,14 +1,27 @@
 use wgpu::util::DeviceExt;
 
+/// Foundational building block for a mesh.
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct Vertex {
+    /// Position in 3d space.
     pub position: glam::Vec3,
+    /// Vector of the direction this vertex points to (for lighting and etc.)
     pub normal: glam::Vec3,
+    /// Used to sample the appropriate pixel(s) from a texture during rendering.
     pub texture_coordinates: glam::Vec2,
 }
 
+/// Data type to reference a particular [Vertex] in a list of vertices.
 pub type Index = u32;
+
+/// Contains data used to construct a [Mesh].
+pub struct MeshData<'a> {
+    /// What vertices make up the mesh.
+    pub vertices: &'a [Vertex],
+    /// Order in which to traverse the vertices.
+    pub indices: &'a [Index],
+}
 
 pub(crate) struct Mesh {
     pub vertex_buffer: wgpu::Buffer,
@@ -36,19 +49,19 @@ pub(crate) const VERTEX_BUFFER_LAYOUT: wgpu::VertexBufferLayout = {
 };
 
 impl Mesh {
-    pub(crate) fn load(device: &wgpu::Device, vertices: &[Vertex], indices: &[Index]) -> Mesh {
+    pub(crate) fn load(device: &wgpu::Device, mesh_data: MeshData) -> Mesh {
         Self {
             vertex_buffer: device.create_buffer_init(
                 &(wgpu::util::BufferInitDescriptor {
                     label: None,
-                    contents: bytemuck::cast_slice(vertices),
+                    contents: bytemuck::cast_slice(mesh_data.vertices),
                     usage: wgpu::BufferUsages::VERTEX,
                 })
             ),
             index_buffer: device.create_buffer_init(
                 &(wgpu::util::BufferInitDescriptor {
                     label: None,
-                    contents: bytemuck::cast_slice(indices),
+                    contents: bytemuck::cast_slice(mesh_data.indices),
                     usage: wgpu::BufferUsages::INDEX,
                 })
             ),

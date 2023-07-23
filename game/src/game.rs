@@ -3,7 +3,7 @@ use std::f32::consts::PI;
 use clockwork::{
     Application,
     util::camera::{ Camera, Projection },
-    graphics::RenderOperation,
+    graphics::{ RenderOperation, MeshId, default_meshes },
     Engine,
     util::texture_atlas::{ TextureAtlas, LazySpriteId },
 };
@@ -27,6 +27,7 @@ pub struct Game {
     tiles: Tiles,
     atlas: TextureAtlas,
     frame: f32,
+    quad_mesh: MeshId,
 }
 
 impl Application for Game {
@@ -74,6 +75,7 @@ impl Application for Game {
             },
             atlas,
             frame: 0.0,
+            quad_mesh: engine.graphics_context.load_mesh(default_meshes::QUAD_MESH_DATA),
         }
     }
 
@@ -81,9 +83,15 @@ impl Application for Game {
         self.player.update(&self.tiles, &engine.input_state);
 
         let render_ops: Vec<RenderOperation> = self.tiles
-            .get_render_operations(&self.atlas, self.frame as usize)
+            .get_render_operations(&self.atlas, self.quad_mesh, self.frame as usize)
             .chain(
-                std::iter::once(self.player.get_render_operation(&self.atlas, self.frame as usize))
+                std::iter::once(
+                    self.player.get_render_operation(
+                        &self.atlas,
+                        self.quad_mesh,
+                        self.frame as usize
+                    )
+                )
             )
             .collect();
 

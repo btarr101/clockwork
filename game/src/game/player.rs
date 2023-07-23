@@ -3,7 +3,7 @@ use std::{ time::Duration, cmp::{ min, max, Ordering } };
 use clockwork::{
     input::InputState,
     input::Keyboard,
-    graphics::{ RenderOperation, QUAD_MESH },
+    graphics::{ RenderOperation, MeshId },
     util::texture_atlas::{ TextureAtlas, LazySpriteId },
 };
 use glam::{ IVec2, Mat4 };
@@ -138,7 +138,12 @@ impl Player {
         }
     }
 
-    pub fn get_render_operation(&self, atlas: &TextureAtlas, frame: usize) -> RenderOperation {
+    pub fn get_render_operation(
+        &self,
+        atlas: &TextureAtlas,
+        mesh: MeshId,
+        frame: usize
+    ) -> RenderOperation {
         let sprite = atlas.get_sprite_lazily(&self.sprite);
         let uv_window = sprite.get_uv_window(frame);
 
@@ -148,7 +153,7 @@ impl Player {
             ).to_cols_array_2d(),
             uv_window,
             texture: sprite.texture,
-            mesh: QUAD_MESH,
+            mesh,
         }
     }
 }
