@@ -1,7 +1,4 @@
-//! # clockwork
-//!
-//! `clockwork` is a small game engine written in rust mainly for personal use.
-//!
+//! Small game engine written in rust mainly for personal use.
 
 mod engine;
 

@@ -1,8 +1,11 @@
-[![Workflow Status](https://github.com/https://github.com/btarr101/clockwork/workflows/main/badge.svg)](https://github.com/https://github.com/btarr101/clockwork/actions?query=workflow%3A%22main%22)
+![Workflow Status](https://github.com/btarr101/clockwork/actions/workflows/ci.yml/badge.svg)
 
-# clockwork
+# Clockwork
+_“There are currently 5 games written in rust and 50 game engines”
+— [Programmers are also human](https://www.youtube.com/watch?v=TGfQu0bQTKc&t=15s)_
 
-## clockwork
+So I'm writing one more.
 
-`clockwork` is a small game engine written in rust mainly for personal use.
-
+## License
+Licensed under
+* MIT license ([LICENSE](LICENSE) or https://opensource.org/licenses/MIT)
