@@ -1,8 +1,10 @@
-pub const BUTTONS: usize = MAX_MOUSEBUTTON + MAX_KEY;
+pub const INPUTS: usize = MAX_MOUSE + MAX_KEY;
 
 // Note, very importantly with this current implementation, I'm sad to say this
 // will only work for 584942417355.072 years.
-pub enum Button {
+
+/// Represents a type of input that can be checked.
+pub enum Input {
     Keyboard(Keyboard),
     Mouse(Mouse),
 }
@@ -16,7 +18,7 @@ pub enum Mouse {
     //Other(u16), // Let's worry about this later...
 }
 
-pub const MAX_MOUSEBUTTON: usize = Mouse::Middle as usize;
+pub const MAX_MOUSE: usize = Mouse::Middle as usize;
 
 /// Possible keyboard button inputs.
 #[derive(Clone, Copy, num_derive::FromPrimitive)]

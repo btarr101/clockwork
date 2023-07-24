@@ -68,8 +68,7 @@ impl TextureAtlas {
         Self { identifiers: HashMap::new(), sprites: Vec::new() }
     }
 
-    /// Adds sprites from an [AsepriteFile], a json document
-    /// that includes metadata about an Aseprite spritesheet.
+    /// Adds sprites from an aseprite generated json document.
     ///
     /// Note this currently assumes two things:
     /// - Animations are marked by tags

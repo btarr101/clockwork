@@ -1,19 +1,24 @@
 use std::cell::RefCell;
 
+/// Fields regarding the projection of a [Camera].
 #[derive(Clone, Copy)]
 pub enum Projection {
     Perspective {
+        /// Aspect ratio of the target display.
         aspect: f32,
+        /// Field of view.
         fov: f32,
+        /// How close objects can get before they are clipped.
         znear: f32,
+        /// How far objects can be before they are clipped.
         zfar: f32,
     },
 }
 
 /// Helper for generating a view projection matrix (the model comes later)
 pub struct Camera {
+    /// Transformation of the [Camera].
     pub affine: glam::Affine3A,
-
     projection: Projection,
     projection_mat: RefCell<Option<glam::Mat4>>,
 }

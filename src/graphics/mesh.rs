@@ -15,7 +15,7 @@ pub struct Vertex {
 /// Data type to reference a particular [Vertex] in a list of vertices.
 pub type Index = u32;
 
-/// Contains data used to construct a [Mesh].
+/// Contains data used to construct a mesh.
 pub struct MeshData<'a> {
     /// What vertices make up the mesh.
     pub vertices: &'a [Vertex],

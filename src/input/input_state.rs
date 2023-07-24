@@ -1,33 +1,33 @@
 use std::time::{ Instant, Duration };
-use super::{ button::{ BUTTONS, MAX_KEY }, Keyboard, Button, Mouse };
+use super::{ inputs::{ INPUTS, MAX_KEY }, Keyboard, Input, Mouse };
 
-/// Manages storring the current state of an application user's inputs.
+/// Manages storing the current state of all the applications possible inputs.
 pub struct InputState {
     // important to note that a state is only valid if it has a
     // non-None timestamp.
-    states: [bool; BUTTONS],
-    press_timestamps: [Option<Instant>; BUTTONS],
-    releaste_timestamps: [Option<Instant>; BUTTONS],
+    states: [bool; INPUTS],
+    press_timestamps: [Option<Instant>; INPUTS],
+    releaste_timestamps: [Option<Instant>; INPUTS],
 }
 
-impl From<Keyboard> for Button {
+impl From<Keyboard> for Input {
     fn from(val: Keyboard) -> Self {
-        Button::Keyboard(val)
+        Input::Keyboard(val)
     }
 }
 
-impl From<Mouse> for Button {
+impl From<Mouse> for Input {
     fn from(val: Mouse) -> Self {
-        Button::Mouse(val)
+        Input::Mouse(val)
     }
 }
 
 impl Default for InputState {
     fn default() -> Self {
         Self {
-            states: [false; BUTTONS],
-            press_timestamps: [None; BUTTONS],
-            releaste_timestamps: [None; BUTTONS],
+            states: [false; INPUTS],
+            press_timestamps: [None; INPUTS],
+            releaste_timestamps: [None; INPUTS],
         }
     }
 }
@@ -38,68 +38,68 @@ impl InputState {
         Default::default()
     }
 
-    /// Checks if an [Button] is currently pressed.
-    pub fn check_pressed<I: Into<Button>>(&self, button: I) -> bool {
-        self.states[Self::get_state_index(button.into())]
+    /// Checks if an [Input] is currently pressed.
+    pub fn check_pressed<I: Into<Input>>(&self, input: I) -> bool {
+        self.states[Self::get_state_index(input.into())]
     }
 
-    /// Checks if an [Button] is currently released.
-    pub fn check_released<I: Into<Button>>(&self, button: I) -> bool {
-        !self.states[Self::get_state_index(button.into())]
+    /// Checks if an [Input] is currently released.
+    pub fn check_released<I: Into<Input>>(&self, input: I) -> bool {
+        !self.states[Self::get_state_index(input.into())]
     }
 
-    /// Checks if an [Button] was pressed within a [Duration].
+    /// Checks if an [Input] was pressed within a [Duration].
     ///
-    /// This is useful for checking if an [Button] was just pressed rather than if it is held
+    /// This is useful for checking if an [Input] was just pressed rather than if it is held
     /// down.
-    pub fn check_pressed_within<I: Into<Button>>(&self, button: I, duration: Duration) -> bool {
-        self.check_within_duration(button.into(), duration, true)
+    pub fn check_pressed_within<I: Into<Input>>(&self, input: I, duration: Duration) -> bool {
+        self.check_within_duration(input.into(), duration, true)
     }
 
-    /// Checks if an [Button] was released within a [Duration].
+    /// Checks if an [Input] was released within a [Duration].
     ///
-    /// This is useful for checking if an [Button] was just released rather than if it isn't
+    /// This is useful for checking if an [Input] was just released rather than if it isn't
     /// held down.
-    pub fn check_released_within<I: Into<Button>>(&self, button: I, duration: Duration) -> bool {
-        self.check_within_duration(button.into(), duration, false)
+    pub fn check_released_within<I: Into<Input>>(&self, input: I, duration: Duration) -> bool {
+        self.check_within_duration(input.into(), duration, false)
     }
 
-    /// Signals to the [InputState] that a specific [Button] was pressed.
+    /// Signals to the [InputState] that a specific [input] was pressed.
     ///
-    /// Will ignore if the [Button] is already pressed.
-    pub fn signal_press_of<I: Into<Button>>(&mut self, button: I) {
-        let index = Self::get_state_index(button.into());
+    /// Will ignore if the [input] is already pressed.
+    pub fn signal_press_of<I: Into<Input>>(&mut self, input: I) {
+        let index = Self::get_state_index(input.into());
         if !self.states[index] {
             self.states[index] = true;
             self.press_timestamps[index] = Some(Instant::now());
         }
     }
 
-    /// Signals to the [InputState] that a specific [Button] was released.
-    pub fn signal_release_of<I: Into<Button>>(&mut self, button: I) {
-        let index = Self::get_state_index(button.into());
+    /// Signals to the [InputState] that a specific [input] was released.
+    pub fn signal_release_of<I: Into<Input>>(&mut self, input: I) {
+        let index = Self::get_state_index(input.into());
         if self.states[index] {
             self.states[index] = false;
             self.releaste_timestamps[index] = Some(Instant::now());
         }
     }
 
-    fn get_state_index(button: Button) -> usize {
-        match button {
-            Button::Keyboard(key) => key as usize,
-            Button::Mouse(button) => (button as usize) + 1 + MAX_KEY,
+    fn get_state_index(input: Input) -> usize {
+        match input {
+            Input::Keyboard(key) => key as usize,
+            Input::Mouse(input) => (input as usize) + 1 + MAX_KEY,
         }
     }
 
-    fn check_within_duration(&self, button: Button, duration: Duration, is_pressed: bool) -> bool {
-        let index = Self::get_state_index(button);
+    fn check_within_duration(&self, input: Input, duration: Duration, is_pressed: bool) -> bool {
+        let index = Self::get_state_index(input);
 
         let timestamps = match is_pressed {
             true => &self.press_timestamps,
             false => &self.releaste_timestamps,
         };
 
-        // Check if the Button timestamp is within 'duration' from now.
+        // Check if the input timestamp is within 'duration' from now.
         if let Some(timestamp) = timestamps[index] {
             let input_duration = Instant::now() - timestamp;
             input_duration <= duration

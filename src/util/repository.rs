@@ -2,7 +2,7 @@ use std::marker::PhantomData;
 use std::collections::HashMap;
 use std::cell::{ RefCell, Cell };
 
-/// References a resource by a compile-time known identifier,
+/// References a resource by a known identifier,
 /// then once it find a resource with the same identifier
 /// caches the resources index.
 pub struct ResourceId<T> {
@@ -16,7 +16,7 @@ enum ResourceIdCacheState {
     Cached(usize),
 }
 
-/// Manages storring and fetching specific types of resources.
+/// Manages storing and fetching specific types of resources.
 pub struct Repository<T> {
     identifiers: RefCell<HashMap<String, usize>>,
     resources: Vec<T>,
