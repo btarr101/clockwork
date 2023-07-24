@@ -23,6 +23,7 @@ pub struct RenderOperation {
     pub mesh: MeshId,
 }
 
+/// Context for rendering visual elements.
 pub struct Context {
     pub(crate) device: wgpu::Device,
     pub(crate) queue: wgpu::Queue,
