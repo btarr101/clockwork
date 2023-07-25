@@ -2,7 +2,7 @@
 
 # Clockwork
 _“There are currently 5 games written in rust and 50 game engines”
-— [Programmers are also human](https://www.youtube.com/watch?v=TGfQu0bQTKc&t=15s)_
+— [Programmers are also human](https://www.youtube.com/watch?v=TGfQu0bQTKc&t=168s)_
 
 So I'm writing one more.
 
