@@ -1,10 +1,26 @@
-use std::marker::PhantomData;
+use std::{fmt::Debug, marker::PhantomData};
 
 /// References a resource within a [Repository].
-#[derive(Clone, Copy)]
 pub struct ResourceId<T> {
     _phantom: PhantomData<T>,
     pub index: usize,
+}
+
+impl<T> Clone for ResourceId<T> {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+
+impl<T> Copy for ResourceId<T> {}
+
+impl<T> Debug for ResourceId<T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ResourceId")
+            .field("_phantom", &self._phantom)
+            .field("index", &self.index)
+            .finish()
+    }
 }
 
 /// Manages storing and fetching specific types of resources.
@@ -19,7 +35,10 @@ pub struct Repository<T> {
 impl<T> ResourceId<T> {
     /// Constructs a new [ResourceId].
     pub fn new(index: usize) -> Self {
-        Self { _phantom: PhantomData, index }
+        Self {
+            _phantom: PhantomData,
+            index,
+        }
     }
 }
 

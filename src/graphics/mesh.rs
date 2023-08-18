@@ -23,19 +23,16 @@ pub struct MeshData<'a> {
     pub indices: &'a [Index],
 }
 
-pub(crate) struct Mesh {
-    pub vertex_buffer: wgpu::Buffer,
-    pub index_buffer: wgpu::Buffer,
+pub struct Mesh {
+    pub(crate) vertex_buffer: wgpu::Buffer,
+    pub(crate) index_buffer: wgpu::Buffer,
 }
 
 unsafe impl bytemuck::Zeroable for Vertex {}
 unsafe impl bytemuck::Pod for Vertex {}
 
 pub(crate) const VERTEX_BUFFER_LAYOUT: wgpu::VertexBufferLayout = {
-    const ATTRIBUTES: [
-        wgpu::VertexAttribute;
-        3
-    ] = wgpu::vertex_attr_array![
+    const ATTRIBUTES: [wgpu::VertexAttribute; 3] = wgpu::vertex_attr_array![
         0 => Float32x3,
         1 => Float32x3,
         2 => Float32x2
@@ -56,14 +53,14 @@ impl Mesh {
                     label: None,
                     contents: bytemuck::cast_slice(mesh_data.vertices),
                     usage: wgpu::BufferUsages::VERTEX,
-                })
+                }),
             ),
             index_buffer: device.create_buffer_init(
                 &(wgpu::util::BufferInitDescriptor {
                     label: None,
                     contents: bytemuck::cast_slice(mesh_data.indices),
                     usage: wgpu::BufferUsages::INDEX,
-                })
+                }),
             ),
         }
     }

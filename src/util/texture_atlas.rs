@@ -1,7 +1,9 @@
-use std::{ collections::HashMap, cell::Cell };
+use crate::graphics::texture::Texture;
 use serde::Deserialize;
 use serde_json::Value;
-use crate::graphics::TextureId;
+use std::{cell::Cell, collections::HashMap};
+
+use super::repository::ResourceId;
 
 /// Id for accessing a sprite from a [TextureAtlas].
 #[derive(Debug, Clone, Copy)]
@@ -23,7 +25,7 @@ enum LazySpriteIdState {
 /// from a larger texture with multiple animations bundled together.
 #[derive(Debug, Clone, Copy)]
 pub struct Sprite {
-    pub texture: TextureId,
+    pub texture: ResourceId<Texture>,
     pub uv_topleft: [f32; 2],
     pub uv_dims: [f32; 2],
     pub frames: usize,
@@ -65,7 +67,10 @@ impl LazySpriteId {
 impl TextureAtlas {
     /// Creates a new empty [TextureAtlas].
     pub fn new() -> Self {
-        Self { identifiers: HashMap::new(), sprites: Vec::new() }
+        Self {
+            identifiers: HashMap::new(),
+            sprites: Vec::new(),
+        }
     }
 
     /// Adds sprites from an aseprite generated json document.
@@ -73,7 +78,11 @@ impl TextureAtlas {
     /// Note this currently assumes two things:
     /// - Animations are marked by tags
     /// - Animations are oriented in row fasion
-    pub fn add_aseprite_sprites(&mut self, aseprite_json_context: &str, texture: TextureId) {
+    pub fn add_aseprite_sprites(
+        &mut self,
+        aseprite_json_context: &str,
+        texture: ResourceId<Texture>,
+    ) {
         let aseprite_json: Value = serde_json::from_str(aseprite_json_context).unwrap();
         let meta = aseprite_json.get("meta").unwrap();
 
@@ -94,20 +103,23 @@ impl TextureAtlas {
             .as_array()
             .unwrap()
             .iter()
-            .map(|value|
+            .map(|value| {
                 serde_json::from_value::<Frame>(value.get("frame").unwrap().clone()).unwrap()
-            )
+            })
             .collect();
 
         let tag_array = meta.get("frameTags").unwrap().as_array().unwrap();
 
         let tags: Vec<Tag> = match tag_array.is_empty() {
-            true => vec![Tag { name: None, from: 0, to: frames.len() - 1 }],
-            false =>
-                tag_array
-                    .iter()
-                    .map(|value| serde_json::from_value::<Tag>(value.clone()).unwrap())
-                    .collect(),
+            true => vec![Tag {
+                name: None,
+                from: 0,
+                to: frames.len() - 1,
+            }],
+            false => tag_array
+                .iter()
+                .map(|value| serde_json::from_value::<Tag>(value.clone()).unwrap())
+                .collect(),
         };
 
         let sprites_and_tags = tags.iter().map(|tag| {
@@ -162,7 +174,9 @@ impl TextureAtlas {
 
     /// Gets a [SpriteId] given proper identification.
     pub fn get_sprite_id(&self, image: &str, tag: Option<&str>) -> Option<SpriteId> {
-        let index = *self.identifiers.get(&(image.to_string(), tag.map(|str| str.to_string())))?;
+        let index = *self
+            .identifiers
+            .get(&(image.to_string(), tag.map(|str| str.to_string())))?;
         Some(SpriteId(index))
     }
 
@@ -170,7 +184,8 @@ impl TextureAtlas {
     pub fn add_sprite(&mut self, sprite: Sprite, image: &str, tag: Option<&str>) -> SpriteId {
         let index = self.sprites.len();
         self.sprites.push(sprite);
-        self.identifiers.insert((image.to_string(), tag.map(|str| str.to_string())), index);
+        self.identifiers
+            .insert((image.to_string(), tag.map(|str| str.to_string())), index);
         SpriteId(index)
     }
 }
