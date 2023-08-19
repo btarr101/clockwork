@@ -1,5 +1,6 @@
 use anyhow::Result;
 use bytemuck::{bytes_of, Pod, Zeroable};
+use glam::vec4;
 use pollster::block_on;
 use raw_window_handle::{HasRawDisplayHandle, HasRawWindowHandle};
 use wgpu::util::DeviceExt;
@@ -13,21 +14,38 @@ use super::{
 
 /// Data needed to render a mesh.
 #[derive(Clone, Copy)]
-pub struct RenderOperation {
-    pub transform: [[f32; 4]; 4],
-    pub texture: ResourceId<Texture>,
-    pub uv_window: [f32; 4],
+pub struct RenderOperation
+{
+    pub transform: glam::Mat4,
     pub mesh: ResourceId<Mesh>,
+    pub texture: Option<ResourceId<Texture>>,
+    pub uv_window: glam::Vec4,
+}
+
+impl Default for RenderOperation
+{
+    fn default() -> Self
+    {
+        RenderOperation {
+            transform: glam::Mat4::IDENTITY,
+            mesh: ResourceId::new(0),
+            texture: None,
+            uv_window: vec4(0., 0., 1., 1.),
+        }
+    }
 }
 
 /// Context for rendering visual elements.
-pub struct Context {
+pub struct Context
+{
     pub(crate) device: wgpu::Device,
     pub(crate) queue: wgpu::Queue,
     pub(crate) surface: wgpu::Surface,
     pub(crate) surface_config: wgpu::SurfaceConfiguration,
 
     pub(crate) pipeline: wgpu::RenderPipeline,
+    pub(crate) pipeline_textured: wgpu::RenderPipeline,
+
     bind_group_layout: wgpu::BindGroupLayout,
     texture_bind_group_layout: wgpu::BindGroupLayout,
     //depth_texture_bind_group_layout: wgpu::BindGroupLayout,
@@ -43,13 +61,15 @@ pub struct Context {
 
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
-struct GlobalBuffer {
+struct GlobalBuffer
+{
     mvp: [[f32; 4]; 4],
 }
 
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
-struct LocalBuffer {
+struct LocalBuffer
+{
     transform: [[f32; 4]; 4],
     uv_window: [f32; 4],
 }
@@ -60,14 +80,16 @@ unsafe impl Pod for GlobalBuffer {}
 unsafe impl Zeroable for LocalBuffer {}
 unsafe impl Pod for LocalBuffer {}
 
-fn setup_pipeline(
+fn setup_pipelines(
     device: &wgpu::Device,
 ) -> (
     wgpu::BindGroupLayout,
     wgpu::BindGroupLayout,
     wgpu::BindGroupLayout,
     wgpu::RenderPipeline,
-) {
+    wgpu::RenderPipeline,
+)
+{
     let bind_group_layout = device.create_bind_group_layout(
         &(wgpu::BindGroupLayoutDescriptor {
             label: None,
@@ -153,6 +175,14 @@ fn setup_pipeline(
     let layout = device.create_pipeline_layout(
         &(wgpu::PipelineLayoutDescriptor {
             label: None,
+            bind_group_layouts: &[&bind_group_layout],
+            push_constant_ranges: &[],
+        }),
+    );
+
+    let layout_textured = device.create_pipeline_layout(
+        &(wgpu::PipelineLayoutDescriptor {
+            label: None,
             bind_group_layouts: &[&bind_group_layout, &texture_bind_group_layout],
             push_constant_ranges: &[],
         }),
@@ -161,6 +191,11 @@ fn setup_pipeline(
     let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
         label: None,
         source: wgpu::ShaderSource::Wgsl(include_str!("shader.wgsl").into()),
+    });
+
+    let shader_textured = device.create_shader_module(wgpu::ShaderModuleDescriptor {
+        label: None,
+        source: wgpu::ShaderSource::Wgsl(include_str!("shader_textured.wgsl").into()),
     });
 
     let pipeline = device.create_render_pipeline(
@@ -206,21 +241,67 @@ fn setup_pipeline(
         }),
     );
 
+    let pipeline_textured = device.create_render_pipeline(
+        &(wgpu::RenderPipelineDescriptor {
+            label: None,
+            layout: Some(&layout_textured),
+            vertex: wgpu::VertexState {
+                module: &shader_textured,
+                entry_point: "vs_main",
+                buffers: &[VERTEX_BUFFER_LAYOUT],
+            },
+            fragment: Some(wgpu::FragmentState {
+                module: &shader_textured,
+                entry_point: "fs_main",
+                targets: &[Some(wgpu::ColorTargetState {
+                    format: wgpu::TextureFormat::Bgra8UnormSrgb,
+                    blend: Some(wgpu::BlendState::PREMULTIPLIED_ALPHA_BLENDING),
+                    write_mask: wgpu::ColorWrites::ALL,
+                })],
+            }),
+            primitive: wgpu::PrimitiveState {
+                topology: wgpu::PrimitiveTopology::TriangleList,
+                strip_index_format: None,
+                front_face: wgpu::FrontFace::Ccw,
+                cull_mode: None, //Some(wgpu::Face::Back),
+                unclipped_depth: false,
+                polygon_mode: wgpu::PolygonMode::Fill,
+                conservative: false,
+            },
+            depth_stencil: Some(wgpu::DepthStencilState {
+                format: wgpu::TextureFormat::Depth32Float,
+                depth_write_enabled: true,
+                depth_compare: wgpu::CompareFunction::LessEqual,
+                stencil: Default::default(),
+                bias: Default::default(),
+            }),
+            multisample: wgpu::MultisampleState {
+                count: 1,
+                mask: !0,
+                alpha_to_coverage_enabled: false,
+            },
+            multiview: None,
+        }),
+    );
+
     (
         bind_group_layout,
         texture_bind_group_layout,
         depth_texture_bind_group_layout,
         pipeline,
+        pipeline_textured,
     )
 }
 
-impl Context {
+impl Context
+{
     /// Creates a new [GraphicsContext].
     pub(crate) fn new<Window: HasRawWindowHandle + HasRawDisplayHandle>(
         window: &Window,
         width: u32,
         height: u32,
-    ) -> Self {
+    ) -> Self
+    {
         block_on(Self::new_async(window, width, height))
     }
 
@@ -229,7 +310,8 @@ impl Context {
         window: &Window,
         width: u32,
         height: u32,
-    ) -> Self {
+    ) -> Self
+    {
         let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
             backends: wgpu::Backends::PRIMARY,
             dx12_shader_compiler: wgpu::Dx12Compiler::Fxc,
@@ -276,7 +358,8 @@ impl Context {
             texture_bind_group_layout,
             depth_texture_bind_group_layout,
             pipeline,
-        ) = setup_pipeline(&device);
+            pipeline_textured,
+        ) = setup_pipelines(&device);
 
         let global_buffer = device.create_buffer_init(
             &(wgpu::util::BufferInitDescriptor {
@@ -327,6 +410,7 @@ impl Context {
             surface_config,
 
             pipeline,
+            pipeline_textured,
             bind_group_layout,
             texture_bind_group_layout,
             //depth_texture_bind_group_layout,
@@ -342,13 +426,15 @@ impl Context {
     }
 
     /// Loads a mesh and returns a [ResourceId<Mesh>] that refers to it.
-    pub fn load_mesh(&mut self, mesh_data: MeshData) -> ResourceId<Mesh> {
+    pub fn load_mesh(&mut self, mesh_data: MeshData) -> ResourceId<Mesh>
+    {
         let mesh = Mesh::load(&self.device, mesh_data);
         self.meshes.add(mesh, None)
     }
 
     /// Loads a texture and returns a [TextureId] that refers to it.
-    pub fn load_texture(&mut self, bytes: &[u8]) -> Result<ResourceId<Texture>> {
+    pub fn load_texture(&mut self, bytes: &[u8]) -> Result<ResourceId<Texture>>
+    {
         let (texture, view) = load_wgpu_texture_and_view(&self.device, &self.queue, bytes)?;
         let bind_group = create_wgpu_bind_group_for_texture(
             &self.device,
@@ -371,7 +457,8 @@ impl Context {
         &mut self,
         model_view_projection: [[f32; 4]; 4],
         operations: &[RenderOperation],
-    ) {
+    )
+    {
         // Step 1: Create necessary local buffers.
         let difference = operations
             .len()
@@ -455,8 +542,6 @@ impl Context {
                 }),
             );
 
-            render_pass.set_pipeline(&self.pipeline);
-
             // Step 4: Copy data from local buffers and render.
             for (index, operation) in operations.iter().copied().enumerate() {
                 let (bind_group, buffer) = self
@@ -465,12 +550,18 @@ impl Context {
                     .expect("should have been sized");
 
                 let local_buffer = LocalBuffer {
-                    transform: operation.transform,
-                    uv_window: operation.uv_window,
+                    transform: operation.transform.to_cols_array_2d(),
+                    uv_window: operation.uv_window.to_array(),
                 };
                 self.queue.write_buffer(buffer, 0, bytes_of(&local_buffer));
+
+                if let Some(texture) = operation.texture {
+                    render_pass.set_pipeline(&self.pipeline_textured);
+                    render_pass.set_bind_group(1, &self.textures[texture].bind_group, &[]);
+                } else {
+                    render_pass.set_pipeline(&self.pipeline)
+                }
                 render_pass.set_bind_group(0, bind_group, &[]);
-                render_pass.set_bind_group(1, &self.textures[operation.texture].bind_group, &[]);
 
                 let mesh = &self.meshes[operation.mesh];
 
@@ -493,7 +584,8 @@ impl Context {
     }
 
     /// Resizes the surface that is rendered to.
-    pub(crate) fn resize_surface(&mut self, new_size: glam::UVec2) {
+    pub(crate) fn resize_surface(&mut self, new_size: glam::UVec2)
+    {
         self.surface_config.width = new_size.x;
         self.surface_config.height = new_size.y;
         self.surface.configure(&self.device, &self.surface_config);
@@ -510,7 +602,8 @@ fn create_wgpu_bind_group_for_texture(
     view: &wgpu::TextureView,
     sampler: &wgpu::Sampler,
     bind_group_layout: &wgpu::BindGroupLayout,
-) -> wgpu::BindGroup {
+) -> wgpu::BindGroup
+{
     device.create_bind_group(
         &(wgpu::BindGroupDescriptor {
             label: None,

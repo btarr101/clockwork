@@ -1,5 +1,7 @@
 use std::collections::HashMap;
 
+use glam::Vec4;
+
 use crate::graphics::texture::Texture;
 
 use super::repository::ResourceId;
@@ -7,7 +9,8 @@ use super::repository::ResourceId;
 /// Contains information on how to render a specific animation
 /// from a larger texture with multiple animations bundled together.
 #[derive(Debug, Clone, Copy)]
-pub struct Sprite {
+pub struct Sprite
+{
     /// Texture this sprite comes from.
     pub texture: ResourceId<Texture>,
     /// Top left uv coordinate.
@@ -20,15 +23,17 @@ pub struct Sprite {
     pub frame_count: usize,
 }
 
-impl Sprite {
-    pub fn get_uv_window(&self, frame: usize) -> [f32; 4] {
+impl Sprite
+{
+    pub fn get_uv_window(&self, frame: usize) -> Vec4
+    {
         let modded_frame = frame % self.frame_count;
-        [
+        Vec4::new(
             self.uv_topleft.x + (self.uv_dims.x * modded_frame as f32),
             self.uv_topleft.y,
             self.uv_dims.x,
             self.uv_dims.y,
-        ]
+        )
     }
 }
 
@@ -36,14 +41,16 @@ impl Sprite {
 // For deserializing the Aseprite file
 // ####################################
 #[derive(serde::Deserialize)]
-struct Tag {
+struct Tag
+{
     name: Option<String>,
     from: usize,
     to: usize,
 }
 
 #[derive(serde::Deserialize)]
-struct Frame {
+struct Frame
+{
     x: u32,
     y: u32,
     w: u32,
@@ -52,7 +59,8 @@ struct Frame {
 // ####################################
 
 /// Return type of [load_aseprite_sprites].
-pub struct LoadedSprites {
+pub struct LoadedSprites
+{
     /// Filename of the image the sprites came from.
     pub image: String,
     /// Mapping from animation tag to sprite.
@@ -63,7 +71,8 @@ pub struct LoadedSprites {
 pub fn load_aseprite_sprites(
     raw_json: &str,
     texture: ResourceId<Texture>,
-) -> anyhow::Result<LoadedSprites> {
+) -> anyhow::Result<LoadedSprites>
+{
     let json: serde_json::Value = serde_json::from_str(raw_json)?;
     let meta = json.get("meta").unwrap();
     let image = meta.get("image").unwrap().as_str().unwrap();
