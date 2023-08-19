@@ -22,6 +22,11 @@ struct Local {
 @group(0) @binding(1)
 var<uniform> local: Local;
 
+@group(1) @binding(0)
+var texture_sampler: sampler;
+@group(1) @binding(1)
+var texture: texture_2d<f32>;
+
 @vertex
 fn vs_main(
     in: VertexInput,
@@ -39,5 +44,10 @@ fn vs_main(
 fn fs_main(
     in: VertexOutput,    
 ) -> @location(0) vec4<f32> {
-    return vec4(1.0, 0.0, 0.0, 1.0);
+    let sample = textureSample(texture, texture_sampler, in.uv);
+    if (sample.w < 0.001) {
+        discard;
+    }
+    
+    return sample;
 }

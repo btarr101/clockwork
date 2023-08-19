@@ -1,3 +1,4 @@
+use std::hash::Hash;
 use std::{fmt::Debug, marker::PhantomData};
 
 /// References a resource within a [Repository].
@@ -23,18 +24,32 @@ impl<T> Debug for ResourceId<T> {
     }
 }
 
+impl<T> PartialEq for ResourceId<T> {
+    fn eq(&self, other: &Self) -> bool {
+        self.index == other.index
+    }
+}
+
+impl<T> Eq for ResourceId<T> {}
+
+impl<T> Hash for ResourceId<T> {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.index.hash(state);
+    }
+}
+
 /// Manages storing and fetching specific types of resources.
 ///
 /// To be completely fair, at the moment it's just a glorified vector,
 /// however the extra typing rules and abstraction potential is something
 /// that will be used eventually.
 pub struct Repository<T> {
-    resources: Vec<Option<T>>,
+    resources: Vec<(Option<T>, usize)>,
 }
 
 impl<T> ResourceId<T> {
     /// Constructs a new [ResourceId].
-    pub fn new(index: usize) -> Self {
+    pub const fn new(index: usize) -> Self {
         Self {
             _phantom: PhantomData,
             index,
@@ -63,20 +78,34 @@ impl<T> Repository<T> {
             None => self.resources.len(),
         };
 
-        self.resources.resize_with(index + 1, || None);
-        self.resources[index] = Some(resource);
+        if index >= self.resources.len() {
+            self.resources.resize_with(index + 1, || (None, 0));
+        }
+
+        let generation = self.resources[index].1;
+        self.resources[index] = (Some(resource), generation + 1);
 
         ResourceId::new(index)
     }
 
     /// Gets a resource using a [ResourceId].
     pub fn get(&self, id: ResourceId<T>) -> Option<&T> {
-        self.resources.get(id.index)?.as_ref()
+        self.resources.get(id.index)?.0.as_ref()
     }
 
     /// Gets a resource mutably using a [ResourceId].
     pub fn get_mut(&mut self, id: ResourceId<T>) -> Option<&mut T> {
-        self.resources.get_mut(id.index)?.as_mut()
+        self.resources.get_mut(id.index)?.0.as_mut()
+    }
+
+    /// Gets the generation of a resource given a [ResourceId].
+    ///
+    /// This can be useful to implement caching mechanisms.
+    pub fn get_generation(&self, id: ResourceId<T>) -> usize {
+        self.resources
+            .get(id.index)
+            .map(|entry| entry.1)
+            .unwrap_or(0)
     }
 }
 
@@ -179,5 +208,32 @@ mod tests {
         // Access again.
         let tool_ref = repository[tool_id];
         assert!(tool_ref.value == 100);
+    }
+
+    #[test]
+    fn test_get_generation() {
+        let mut repository = Repository::<Tool>::new();
+        let hoe = Tool {
+            tool_type: ToolType::Hoe,
+            value: 60,
+        };
+
+        let pickaxe = Tool {
+            tool_type: ToolType::Pickaxe,
+            value: 100,
+        };
+
+        let tool_id = ResourceId::new(10);
+
+        assert!(repository.get_generation(tool_id) == 0);
+
+        repository.add(hoe, Some(tool_id));
+
+        dbg!(repository.get_generation(tool_id));
+        assert!(repository.get_generation(tool_id) == 1);
+
+        repository.add(pickaxe, Some(tool_id));
+
+        assert!(repository.get_generation(tool_id) == 2);
     }
 }

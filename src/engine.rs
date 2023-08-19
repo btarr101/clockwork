@@ -1,8 +1,12 @@
-use crate::{ graphics::Context, input::InputState, input::{ Keyboard, Mouse } };
+use crate::{
+    graphics::RenderContext,
+    input::InputState,
+    input::{Keyboard, Mouse},
+};
 
 pub struct Engine {
     pub window: winit::window::Window,
-    pub graphics_context: Context,
+    pub graphics_context: RenderContext,
     pub input_state: InputState,
 }
 
@@ -22,14 +26,13 @@ pub trait Application: 'static {
 pub fn run<App: Application>() {
     let event_loop = winit::event_loop::EventLoop::new();
 
-    let window = winit::window::WindowBuilder
-        ::new()
+    let window = winit::window::WindowBuilder::new()
         .with_title("Clockwork Engine")
         .build(&event_loop)
         .unwrap();
 
     let size = window.inner_size();
-    let graphics_context = Context::new(&window, size.width, size.height);
+    let graphics_context = RenderContext::new(&window, size.width, size.height);
 
     let input_state = InputState::new();
 
@@ -41,58 +44,59 @@ pub fn run<App: Application>() {
 
     let mut app = App::init(&mut engine);
 
-    event_loop.run(move |event, _, control_flow| {
-        match event {
-            winit::event::Event::WindowEvent { event, .. } =>
-                match event {
-                    winit::event::WindowEvent::KeyboardInput {
-                        input: winit::event::KeyboardInput {
-                            virtual_keycode: Some(keycode),
-                            state,
-                            ..
-                        },
-                        is_synthetic: false,
+    event_loop.run(move |event, _, control_flow| match event {
+        winit::event::Event::WindowEvent { event, .. } => match event {
+            winit::event::WindowEvent::KeyboardInput {
+                input:
+                    winit::event::KeyboardInput {
+                        virtual_keycode: Some(keycode),
+                        state,
                         ..
-                    } => {
-                        let key: Keyboard = num::FromPrimitive::from_u32(keycode as u32).unwrap();
-                        match state {
-                            winit::event::ElementState::Pressed =>
-                                engine.input_state.signal_press_of(key),
-                            winit::event::ElementState::Released =>
-                                engine.input_state.signal_release_of(key),
-                        }
+                    },
+                is_synthetic: false,
+                ..
+            } => {
+                let key: Keyboard = num::FromPrimitive::from_u32(keycode as u32).unwrap();
+                match state {
+                    winit::event::ElementState::Pressed => engine.input_state.signal_press_of(key),
+                    winit::event::ElementState::Released => {
+                        engine.input_state.signal_release_of(key)
                     }
-                    winit::event::WindowEvent::MouseInput { button, state, .. } => {
-                        let button: Option<Mouse> = match button {
-                            winit::event::MouseButton::Left => Some(Mouse::Left),
-                            winit::event::MouseButton::Right => Some(Mouse::Right),
-                            winit::event::MouseButton::Middle => Some(Mouse::Middle),
-                            _ => None,
-                        };
-
-                        if let Some(button) = button {
-                            match state {
-                                winit::event::ElementState::Pressed =>
-                                    engine.input_state.signal_press_of(button),
-                                winit::event::ElementState::Released =>
-                                    engine.input_state.signal_release_of(button),
-                            }
-                        }
-                    }
-                    winit::event::WindowEvent::CloseRequested => control_flow.set_exit(),
-                    winit::event::WindowEvent::Resized(
-                        winit::dpi::PhysicalSize { width, height },
-                    ) => {
-                        let new_size = glam::UVec2 { x: width, y: height };
-                        engine.graphics_context.resize_surface(new_size);
-                        app.on_window_resize(&mut engine, new_size);
-                    }
-                    _ => (),
                 }
-            winit::event::Event::MainEventsCleared => {
-                app.update(&mut engine, 0.0);
+            }
+            winit::event::WindowEvent::MouseInput { button, state, .. } => {
+                let button: Option<Mouse> = match button {
+                    winit::event::MouseButton::Left => Some(Mouse::Left),
+                    winit::event::MouseButton::Right => Some(Mouse::Right),
+                    winit::event::MouseButton::Middle => Some(Mouse::Middle),
+                    _ => None,
+                };
+
+                if let Some(button) = button {
+                    match state {
+                        winit::event::ElementState::Pressed => {
+                            engine.input_state.signal_press_of(button)
+                        }
+                        winit::event::ElementState::Released => {
+                            engine.input_state.signal_release_of(button)
+                        }
+                    }
+                }
+            }
+            winit::event::WindowEvent::CloseRequested => control_flow.set_exit(),
+            winit::event::WindowEvent::Resized(winit::dpi::PhysicalSize { width, height }) => {
+                let new_size = glam::UVec2 {
+                    x: width,
+                    y: height,
+                };
+                engine.graphics_context.resize_surface(new_size);
+                app.on_window_resize(&mut engine, new_size);
             }
             _ => (),
+        },
+        winit::event::Event::MainEventsCleared => {
+            app.update(&mut engine, 0.0);
         }
+        _ => (),
     });
 }
